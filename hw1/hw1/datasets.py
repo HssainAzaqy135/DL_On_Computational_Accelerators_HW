@@ -3,7 +3,6 @@ from torch import Tensor
 from typing import Tuple, Iterator
 from contextlib import contextmanager
 from torch.utils.data import Dataset, IterableDataset
-#Hello hussain
 
 def random_labelled_image(
     shape: Tuple[int, ...], num_classes: int, low=0, high=255, dtype=torch.int,
@@ -20,7 +19,9 @@ def random_labelled_image(
     # TODO:
     #  Implement according to the docstring description.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    image = torch.rand(shape)*(high-low)+low
+    label = torch.randint(0,num_classes-1,())
+    label = label.item()
     # ========================
     return image, label
 
@@ -36,18 +37,17 @@ def torch_temporary_seed(seed: int):
     #  Implement this context manager as described.
     #  See torch.random.get/set_rng_state(), torch.random.manual_seed().
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    initial_seed=torch.random.get_rng_state()
     # ========================
     try:
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        torch.random.manual_seed(seed)
         # ========================
         yield
     finally:
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        torch.random.set_rng_state(initial_seed)
         # ========================
-
 
 class RandomImageDataset(Dataset):
     """
@@ -82,7 +82,11 @@ class RandomImageDataset(Dataset):
         #  the random state outside this method.
         #  Raise a ValueError if the index is out of range.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        if index >= self.num_samples:
+            raise ValueError
+        with torch_temporary_seed(index):
+            im = random_labelled_image(self.image_dim,self.num_classes)
+        return im
         # ========================
 
     def __len__(self):
@@ -90,7 +94,7 @@ class RandomImageDataset(Dataset):
         :return: Number of samples in this dataset.
         """
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        return self.num_samples
         # ========================
 
 
