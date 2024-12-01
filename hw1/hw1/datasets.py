@@ -82,11 +82,11 @@ class RandomImageDataset(Dataset):
         #  the random state outside this method.
         #  Raise a ValueError if the index is out of range.
         # ====== YOUR CODE: ======
-        if index >= self.num_samples:
-            raise ValueError
+        if index < 0 or index >= self.num_samples:
+            raise ValueError(f"index: {index} is out of range")
         with torch_temporary_seed(index):
-            im = random_labelled_image(self.image_dim,self.num_classes)
-        return im
+            img,label = random_labelled_image(self.image_dim,self.num_classes)
+        return img,label
         # ========================
 
     def __len__(self):
@@ -123,7 +123,8 @@ class ImageStreamDataset(IterableDataset):
         #  Yield tuples to produce an iterator over random images and labels.
         #  The iterator should produce an infinite stream of data.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        while True:
+            yield random_labelled_image(self.image_dim, self.num_classes)
         # ========================
 
 
@@ -151,10 +152,13 @@ class SubsetDataset(Dataset):
         #  Return the item at index + offset from the source dataset.
         #  Raise an IndexError if index is out of bounds.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        if index >= self.subset_len or index < 0:
+            raise IndexError(f"sample index {index} is out of range")
+        else:
+            return self.source_dataset[self.offset + index]
         # ========================
 
     def __len__(self):
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        return self.subset_len
         # ========================
