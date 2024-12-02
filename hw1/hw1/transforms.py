@@ -65,5 +65,9 @@ class BiasTrick(object):
         #  Add a 1 at the beginning of the given tensor's feature dimension.
         #  Hint: See torch.cat().
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # Prepare the correct batch dimensions based on x 
+        ones = torch.ones(*x.shape[:-1], 1, dtype=x.dtype, device=x.device)
+        # Concatenate the ones with the original tensor along the feature dimension
+        x_with_bias_one = torch.cat((ones, x), dim=-1)
+        return x_with_bias_one
         # ========================

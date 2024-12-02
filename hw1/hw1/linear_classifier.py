@@ -23,7 +23,7 @@ class LinearClassifier(object):
 
         self.weights = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.weights = torch.normal(mean=0.0, std=weight_std, size = (n_features + 1, n_classes))
         # ========================
 
     def predict(self, x: Tensor):
@@ -45,7 +45,19 @@ class LinearClassifier(object):
 
         y_pred, class_scores = None, None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # Ensure the input x has the correct shape
+        assert x.dim() == 2 and x.shape[1] == self.n_features, "Input tensor shape must be (N, n_features)"
+
+        # Add a column of ones for the bias term (prepended to the features)
+        ones = torch.ones(x.shape[0], 1, dtype=x.dtype, device=x.device)
+        x_bias = torch.cat((ones, x), dim=1)
+        # Calculate the class scores: (N, n_classes)
+        class_scores = x_bias @ self.weights
+
+        # Get the predicted class: (N,)
+        y_pred = torch.argmax(class_scores, dim=1)
+
+        return y_pred, class_scores
         # ========================
 
         return y_pred, class_scores
@@ -66,7 +78,11 @@ class LinearClassifier(object):
 
         acc = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        
+        # Calculate the number of correct predictions
+        correct_predictions = (y == y_pred).sum().item()
+        # Calculate accuracy
+        acc = correct_predictions / y.shape[0]
         # ========================
 
         return acc * 100
