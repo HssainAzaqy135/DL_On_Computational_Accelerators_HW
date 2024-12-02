@@ -43,7 +43,8 @@ part1_q2 = r"""
 The friend's approach isn’t correct.
 
 When tuning a model’s hyperparameters, we should only check how it performs on the training set, by using CV to find the best params.
-The test set should only be used at the very end to check how well the model works on completely new data. Given that we use the test set to choose the best params, we are effictively "leaking" information about it into the training process, which makes the final test results unreliable and probably better than it actualy should be in practice.
+The test set should only be used at the very end to check how well the model works on completely new data. Given that we use the test set to choose the best params, we are effectively "leaking" information about it into the training process as we incorporate the test set into the model development process. The test set should be completely independent and unseen data set for the final evaluation. The friend's approach also risks overfitting to the test set, as the $\lambda$ chosen may perform well on the test set itself but it might be worse on new unseen data. Therefore, the correct approach would be only using the training set and CV to fine tune $\lambda$ and evaluate exactly once on the test set to measure final performance.
+
 
 """
 
