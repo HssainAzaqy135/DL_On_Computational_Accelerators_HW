@@ -51,14 +51,22 @@ class SVMHingeLoss(ClassifierLoss):
         #    for sample i and class j (i.e. s_j - s_{y_i} + delta).
 
         loss = None
-        # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # # ====== YOUR CODE: ======
+        truth_scores = x_scores[:, y].diag().reshape([x_scores.shape[0],1])
+        repeated_truth_scores = truth_scores.repeat(1, x_scores.shape[-1])
+        M = self.delta + x_scores - repeated_truth_scores
+        maxed_M = torch.maximum(M, torch.zeros(M.shape))
+        loss = torch.mean(torch.sum(maxed_M, dim=1) - self.delta)
         # ========================
 
         # TODO: Save what you need for gradient calculation in self.grad_ctx
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
+        # The obvious gradients (Linear)
+        self.grad_ctx["C"] = x_scores.shape[1]
+        self.grad_ctx["m"] = M
+        self.grad_ctx["y"] = y
+        self.grad_ctx["x"] = x
+        # # ========================
 
         return loss
 
@@ -75,7 +83,20 @@ class SVMHingeLoss(ClassifierLoss):
 
         grad = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # Extract params
+        m = self.grad_ctx["m"]
+        y = self.grad_ctx["y"]
+        class_count = self.grad_ctx["C"]
+        x = self.grad_ctx["x"]
+        # Computing G
+        G = (m > 0).float()
+        G_row_penalty = -1 * torch.sum(G, dim=1).reshape([m.shape[0], 1])
+        G_truth_mask = torch.nn.functional.one_hot(y, num_classes=class_count)
+        G_truth_penalty = torch.mul(G_row_penalty, G_truth_mask)
+        G += G_truth_penalty
+        grad = torch.matmul(x.T, G) / x.shape[0]
         # ========================
+
+        
 
         return grad
