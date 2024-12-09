@@ -60,10 +60,10 @@ class LinearRegressor(BaseEstimator, RegressorMixin):
         I = np.eye(d)
 
         # Compute the optimal weights using the closed-form solution
-        XTX = X.T @ X
-        XTX_reg = XTX + reg_lambda * I
-
-        w_opt = np.linalg.inv(XTX_reg) @ X.T @ y
+        reg_mat = reg_lambda * N * I
+        reg_mat[0, 0] = 0  # no regularization to the bias term
+        
+        w_opt = np.linalg.inv(X.T @ X + reg_mat) @ X.T @ y # (X^T * X + lambda * N * I)^-1 * X^T*Y
         # ========================
 
         self.weights_ = w_opt
@@ -89,7 +89,9 @@ def fit_predict_dataframe(
     """
     # TODO: Implement according to the docstring description.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    X = df.drop(target_name, axis=1) if feature_names is None else df[feature_names]
+    y = df[target_name]
+    y_pred = model.fit_predict(X.values, y)
     # ========================
     return y_pred
 
@@ -130,7 +132,11 @@ class BostonFeaturesTransformer(BaseEstimator, TransformerMixin):
         # TODO: Your custom initialization, if needed
         # Add any hyperparameters you need and save them as above
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # Define indices for specific features in the Boston dataset
+        self.bias_offset = 1  # Adjust for the added bias column
+        self.crim_index = 0 + self.bias_offset  # Crime rate feature
+        self.chas_index = 3 + self.bias_offset  # Charles River feature
+        self.lstat_index = 12 + self.bias_offset  # Lower status population percentage
         # ========================
 
     def fit(self, X, y=None):
@@ -152,7 +158,18 @@ class BostonFeaturesTransformer(BaseEstimator, TransformerMixin):
 
         X_transformed = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        X_transformed = np.array(X, copy=True)
+
+        # Apply log transformation to specified features
+        X_transformed[:, self.crim_index] = np.log(X_transformed[:, self.crim_index])
+        X_transformed[:, self.lstat_index] = np.log(X_transformed[:, self.lstat_index])
+
+        # Remove the 'chas' feature 
+        X_transformed = np.delete(X_transformed, self.chas_index, axis=1)
+
+        # Generate polynomial features
+        poly = sklearn.preprocessing.PolynomialFeatures(degree=self.degree, include_bias=False)
+        X_transformed = poly.fit_transform(X_transformed)
         # ========================
 
         return X_transformed
@@ -253,7 +270,30 @@ def cv_best_hyperparams(
     #  - You can use MSE or R^2 as a score.
 
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # Define the parameter grid for GridSearchCV
+    param_grid = {
+        'bostonfeaturestransformer__degree': degree_range,  # Polynomial degree
+        'linearregressor__reg_lambda': lambda_range,             # Regularization parameter
+    }
+
+    # Define the scoring metric (Mean Squared Error in this case)
+    scorer = sklearn.metrics.make_scorer(mse_score, greater_is_better=False)
+
+    # Initialize GridSearchCV
+    grid_search = sklearn.model_selection.GridSearchCV(
+        estimator=model,
+        param_grid=param_grid,
+        scoring=scorer,
+        cv=k_folds,
+        n_jobs=-1  # Use all available cores for parallel processing
+    )
+
+    # Perform the grid search
+    grid_search.fit(X, y)
+
+    # Extract the best hyperparameters from the search
+    best_params = grid_search.best_params_
+
     # ========================
 
     return best_params
