@@ -54,7 +54,7 @@ The test set should only be used at the very end to check how well the model wor
 part2_q1 = r"""
 **Your answer:**
 The $\Delta$ in the structured hinge loss represents a penalty that determines the amount of separation enforced between the true class score to the incorrect one. Therefore when $\Delta$ is positive there is a penalty when the model prediction is too close to the boundary. That means that a positive delta enforces stricter separation. It improves robustness as the model becomes less likely to misclassify borderline cases. However, the regularization term encourages smaller weight to prevent overfitting and making it harder for the model to achieve strict separation. In effect regularization encourages the model to generalize better but at the cost of slightly relaxing the separation margin.
-In the other case, when $\Delta$ is negative we allow the score of anther class to be lower than the true class. It thereby relaxes the requirements for the correct class to have higher score. That decreases robustness, makes weaker generalization and paving the road for numerous misclassifications.
+In the other case, when $\Delta$ is negative we allow the score of another class to be lower than the true class. It thereby relaxes the requirements for the correct class to have higher score. That decreases robustness, makes weaker generalization and paving the road for numerous misclassifications.
 
 
 
@@ -82,40 +82,37 @@ based on the accuracy graph we can see that in the last ephochs Training accurac
 
 part3_q1 = r"""
 **Your answer:**
+The ideal pattern to see in a residual plot should be is 0 error therfore we would want a single straight line on the zero mark.Ideally we will get mse of 0.
 
+The fitness of the trained model seems to be fine. As we can see that the training points are clustered closely and similarly to the test points.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
-
+The residual plot after cross-validation indicates that the trained model performs better than the model with the top five features. The final plot shows a more consistent residual pattern, with residuals closer to and more centered around the zero line. This is further supported by the lower mean squared error (MSE). Additionally, there are noticeably fewer outliers in the final model's residuals.
 """
 
 part3_q2 = r"""
+
 **Your answer:**
 
+It is still a linear regression model because it is still a linear combination of the features - the model is still a linear function but with just non linear feature mapping. 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+Technically we can apply any non-linear on the original features, but it will benefit the model if it captures the underlying non-linear relationships. Meaning we favore features that help seperate the data. However adding features increases the dimension which can lead to overfitting "The curse of dimensionality" .
 
+The decision boundary remains a hyperplane in the transformed feature space because the model is a linear combination of the transformed features. However, in the original feature space, the decision boundary appears non-linear. For instance, if we start with two features and transform them into a higher-dimensional feature space, the decision boundary remains a hyperplane in that transformed space. In contrast, in the original feature space, this boundary may take on a curved shape with non-linear form.
 """
 
 part3_q3 = r"""
 **Your answer:**
 
+Using a logarithmic scale enables sampling from a wider range of values while maintaining proportions to the scale. This approach ensures that smaller and larger values are represented relative to their magnitude. In contrast, linear spacing is inefficient for sampling over a large range because it spaces values evenly, often resulting in many samples clustered closely together, leading to redundancy.This reduces the number of samples by narrowing the range. which is good for CV since it has less combinations this way and eases computations.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+
+
+
+The model underwent 180 fits to the data. Here's the calculation:
+The degree parameter has 3 possible values: [1, 2, 3].
+The other parameter includes 20 values.
+For each combination the model fitted 3 folds.
+
 
 """
 

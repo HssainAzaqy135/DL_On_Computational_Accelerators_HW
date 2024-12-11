@@ -63,7 +63,7 @@ class LinearRegressor(BaseEstimator, RegressorMixin):
         reg_mat = reg_lambda * N * I
         reg_mat[0, 0] = 0  # no regularization to the bias term
         
-        w_opt = np.linalg.inv(X.T @ X + reg_mat) @ X.T @ y # (X^T * X + lambda * N * I)^-1 * X^T*Y
+        w_opt = np.linalg.inv(X.T @ X + reg_mat) @ X.T @ y # (X^T * X + lambda *N* I)^-1 * X^T*Y
         # ========================
 
         self.weights_ = w_opt
