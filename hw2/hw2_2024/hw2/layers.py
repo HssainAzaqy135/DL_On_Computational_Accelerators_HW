@@ -82,7 +82,7 @@ class LeakyReLU(Layer):
 
         # TODO: Implement the LeakyReLU operation.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        out = torch.where(x > 0, x, self.alpha * x)
         # ========================
 
         self.grad_cache["x"] = x
@@ -97,9 +97,8 @@ class LeakyReLU(Layer):
 
         # TODO: Implement gradient w.r.t. the input x
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        dx = torch.where(x > 0, 1.0, self.alpha) *dout
         # ========================
-
         return dx
 
     def params(self):
@@ -116,7 +115,7 @@ class ReLU(LeakyReLU):
 
     def __init__(self):
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        super().__init__(alpha=0.0)
         # ========================
 
     def __repr__(self):
@@ -142,7 +141,8 @@ class Sigmoid(Layer):
         # TODO: Implement the Sigmoid function.
         #  Save whatever you need into grad_cache.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        out = 1 / (1 + torch.exp(-x))
+        self.grad_cache["prev_out"] = out
         # ========================
 
         return out
@@ -155,7 +155,8 @@ class Sigmoid(Layer):
 
         # TODO: Implement gradient w.r.t. the input x
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        prev_out = self.grad_cache["prev_out"]
+        dx = (prev_out)*(1-prev_out)*dout
         # ========================
 
         return dx
@@ -183,7 +184,10 @@ class TanH(Layer):
         # TODO: Implement the tanh function.
         #  Save whatever you need into grad_cache.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        positive_exp = torch.exp(x)
+        negative_exp = torch.exp(-x)
+        out = (positive_exp - negative_exp)/(positive_exp + negative_exp)
+        self.grad_cache["prev_out"] = out
         # ========================
 
         return out
@@ -196,7 +200,7 @@ class TanH(Layer):
 
         # TODO: Implement gradient w.r.t. the input x
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        dx = (1-self.grad_cache["prev_out"]**2)*dout
         # ========================
 
         return dx
@@ -224,7 +228,8 @@ class Linear(Layer):
         # Initialize the weights to zero-mean gaussian noise with a standard
         # deviation of `wstd`. Init bias to zero.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.w = torch.randn(out_features, in_features) * wstd
+        self.b = torch.zeros(out_features)
         # ========================
 
         # These will store the gradients
@@ -244,7 +249,7 @@ class Linear(Layer):
 
         # TODO: Compute the affine transform
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        out = torch.mm(x,self.w.T) + self.b
         # ========================
 
         self.grad_cache["x"] = x
@@ -263,7 +268,9 @@ class Linear(Layer):
         #   - db, the gradient of the loss with respect to b
         #  Note: You should ACCUMULATE gradients in dw and db.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.db += torch.sum(dout, dim=0)
+        self.dw += torch.mm(dout.T, x)
+        dx = torch.mm(dout, self.w)
         # ========================
 
         return dx
@@ -304,7 +311,7 @@ class CrossEntropyLoss(Layer):
         # TODO: Compute the cross entropy loss using the last formula from the
         #  notebook (i.e. directly using the class scores).
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        
         # ========================
 
         self.grad_cache["x"] = x
