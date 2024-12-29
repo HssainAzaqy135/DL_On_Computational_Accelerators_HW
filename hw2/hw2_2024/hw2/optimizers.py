@@ -93,7 +93,9 @@ class MomentumSGD(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # Key: holding id of each parameter to not copy them, instead weak point at them. init velocity to zero
+        # Value: the previous velocity is the value
+        self.velocity = {id(p): torch.zeros_like(p) for p, _ in self.params} 
         # ========================
 
     def step(self):
@@ -105,7 +107,16 @@ class MomentumSGD(Optimizer):
             # update the parameters tensor based on the velocity. Don't forget
             # to include the regularization term.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            v = self.velocity[id(p)] # velocity t
+            
+            # Update velocity t+1 using momentum and velocity t
+            v = self.momentum * v - self.learn_rate * (dp + self.reg * p)
+            
+            # Store updated velocity t+1
+            self.velocity[id(p)] = v
+            
+            # Update parameter using velocity t+1
+            p += v
             # ========================
 
 
@@ -126,7 +137,7 @@ class RMSProp(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.grad_sqr_cache = {id(p): torch.zeros_like(p) for p, _ in self.params}
         # ========================
 
     def step(self):
@@ -139,5 +150,18 @@ class RMSProp(Optimizer):
             # average of it's previous gradients. Use it to update the
             # parameters tensor.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            cashed_grad = self.grad_sqr_cache[id(p)]
+            
+            # Add L2 regularization to gradient
+            dp = dp + self.reg * p
+            
+            # Update cache of squared gradients
+            cashed_grad = self.decay * cashed_grad + (1 - self.decay) * dp * dp
+            
+            # Store updated cache
+            self.grad_sqr_cache[id(p)] = cashed_grad
+            
+            # Update parameters using RMSProp update rule
+            intermidiate_val = dp / (torch.sqrt(cashed_grad) + self.eps)
+            p -= self.learn_rate * intermidiate_val
             # ========================

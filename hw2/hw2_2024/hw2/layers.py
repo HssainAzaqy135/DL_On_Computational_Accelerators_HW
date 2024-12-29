@@ -366,13 +366,23 @@ class Dropout(Layer):
         super().__init__()
         assert 0.0 <= p < 1.0
         self.p = p
+        self.training_mode = True
+        self.mask = None
 
     def forward(self, x, **kw):
         # TODO: Implement the dropout forward pass.
         #  Notice that contrary to previous layers, this layer behaves
         #  differently a according to the current training_mode (train/test).
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.training_mode = kw.get('training_mode', True)
+        if self.training_mode:
+            # Generate dropout mask
+            self.mask = (torch.rand_like(x) > self.p).float()
+            # Scale up by 1/(1-p) to maintain expected value
+            out = (x * self.mask) / (1 - self.p)
+        else:
+            # During test time, no dropout is applied like training
+            out = x
         # ========================
 
         return out
@@ -380,7 +390,10 @@ class Dropout(Layer):
     def backward(self, dout):
         # TODO: Implement the dropout backward pass.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        if self.training_mode:
+            dx = dout * self.mask / (1 - self.p) # adjusting backward pass for training 
+        else:
+            dx = dout # no adjustments needed for testing/ eval
         # ========================
 
         return dx
@@ -495,32 +508,20 @@ class MLP(Layer):
 
         # TODO: Build the MLP architecture as described.
         # ====== YOUR CODE: ======
-        # First layer
-        layers.append(Linear(in_features, hidden_features[0]))  
-        # First layer activation function
-        if activation == "relu":
-            layers.append(ReLU())  # Add ReLU
-        elif activation == "sigmoid":
-            layers.append(Sigmoid())  # Add Sigmoid
-        else:
-            raise ValueError(f"Unsupported activation function: {activation}") 
-
-        # Hidden layers
-        for i in range(1, len(hidden_features)):
-        # Add the Linear layer for each hidden layer transition
-            layers.append(Linear(hidden_features[i-1], hidden_features[i])) 
-            # Add activation function (ReLU or Sigmoid)
-            if activation == "relu":
-                layers.append(ReLU())  # Add ReLU
-            elif activation == "sigmoid":
-                layers.append(Sigmoid())  # Add Sigmoid
-            else:
-                raise ValueError(f"Unsupported activation function: {activation}")
-
+        # accounting for all layers
+        all_features = (in_features,) + tuple(hidden_features) + (num_classes,)
         
-
-        # Final output layer (Linear)
-        layers.append(Linear(hidden_features[-1], num_classes))  # Final Linear layer no activation
+        # building architecture
+        
+        for i in range(len(all_features) - 1):
+            layers.append(Linear(all_features[i], all_features[i + 1]))
+            
+            # Add activation and dropout for all but the last layer
+            if i < len(all_features) - 2: # last layer no activation or dropout
+                layers.append(ReLU() if activation == "relu" else Sigmoid())
+                if dropout > 0:
+                    layers.append(Dropout(p=dropout))
+        
         # ========================
 
         self.sequence = Sequential(*layers)
