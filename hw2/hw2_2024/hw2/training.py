@@ -83,7 +83,15 @@ class Trainer(abc.ABC):
             #  - Use the train/test_epoch methods.
             #  - Save losses and accuracies in the lists above.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            ep_train_loss, ep_train_acc = self.train_epoch(dl_train, **kw)
+            ep_test_loss, ep_test_acc = self.test_epoch(dl_test, **kw)
+            # Compute and append avg epoch losses
+            train_loss.append(sum(ep_train_loss) / len(ep_train_loss))
+            test_loss.append(sum(ep_test_loss) / len(ep_test_loss))
+            # Append accuracies
+            train_acc.append(ep_train_acc)
+            test_acc.append(ep_test_acc)
+            test_result = ep_test_acc # for the rest of the code to work
             # ========================
 
             # TODO:
@@ -92,14 +100,25 @@ class Trainer(abc.ABC):
             #  - Optional: Implement checkpoints. You can use the save_checkpoint
             #    method on this class to save the model to the file specified by
             #    the checkpoints argument.
-            if best_acc is None or test_result.accuracy > best_acc:
+            if best_acc is None or test_result > best_acc:
                 # ====== YOUR CODE: ======
-                raise NotImplementedError()
+                best_acc = test_result #update best accuracy
+                epochs_without_improvement = 0  # Reset early stopping counter
+
+                # Save checkpoint if wanted
+                if checkpoints:
+                    self.save_checkpoint(checkpoints)
                 # ========================
             else:
                 # ====== YOUR CODE: ======
-                raise NotImplementedError()
+                epochs_without_improvement += 1
                 # ========================
+                    # Early stopping
+            if early_stopping and epochs_without_improvement >= early_stopping:
+                self._print("Early stopping Ocurred.", verbose)
+                break
+    
+            actual_num_epochs += 1
 
         return FitResult(actual_num_epochs, train_loss, train_acc, test_loss, test_acc)
 
@@ -286,7 +305,9 @@ class ClassifierTrainer(Trainer):
 class LayerTrainer(Trainer):
     def __init__(self, model, loss_fn, optimizer):
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.model = model
+        self.loss_fn = loss_fn
+        self.optimizer = optimizer
         # ========================
 
     def train_batch(self, batch) -> BatchResult:
@@ -299,7 +320,18 @@ class LayerTrainer(Trainer):
         #  - Calculate number of correct predictions (make sure it's an int,
         #    not a tensor) as num_correct.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        X = X.view(X.size(0), -1) # flattening tensor
+        # Forawrd pass
+        preds = self.model(X)
+        batch_loss = self.loss_fn.forward(preds,y).item()
+        self.optimizer.zero_grad()
+        # Backward pass
+        self.model.backward(self.loss_fn.backward())
+        self.optimizer.step()
+        # Calculate correctness in classification case
+        predicted_labels = preds.max(dim=1)[1] #take the second entry
+        num_correct = (predicted_labels == y).sum().item() # .item to make it int not tensor
+        loss = batch_loss # to pass as function return value
         # ========================
 
         return BatchResult(loss, num_correct)
@@ -309,7 +341,13 @@ class LayerTrainer(Trainer):
 
         # TODO: Evaluate the Layer model on one batch of data.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        X = X.view(X.size(0), -1) # flattening tensor
+        with torch.no_grad():
+            preds = self.model(X)
+            batch_loss = self.loss_fn.forward(preds,y).item()
+            predicted_labels = preds.max(dim=1)[1] #take the second entry
+            num_correct = (predicted_labels == y).sum().item() # .item to make it int not tensor
+            loss = batch_loss # to pass as function return value
         # ========================
 
         return BatchResult(loss, num_correct)
