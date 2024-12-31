@@ -77,7 +77,7 @@ def part2_optim_hp():
     wstd = 0.0001
     lr_vanilla = 0.02
     lr_momentum = 0.005
-    lr_rmsprop = 0.00035
+    lr_rmsprop = 0.00025
     reg = 0.0005
     # ========================
     return dict(
@@ -107,28 +107,25 @@ def part2_dropout_hp():
 
 
 part2_q1 = r"""
-**Your answer:**
+Q1
+
+A. Comparison of Graphs with Dropout and No-Dropout:
+
+Regarding the graphs with dropout and no-dropout, the results align with our expectations. As anticipated, the highest training accuracy is observed for the no-dropout variant due to its strong overfitting to the training data. This also explains the lower training loss in the no-dropout variant. However, when examining the test accuracy, we observe that the no-dropout variant achieves a lower accuracy compared to the 0.4 dropout variant. This indicates that the 0.4 dropout variant is less overfitted to the training data and exhibits better generalization than the no-dropout variant.
 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+
+B. Comparison of Graphs with 0.4 Dropout and 0.8 Dropout:
+
+For the graphs comparing 0.4 dropout and 0.8 dropout, we observe that the training loss is lower with 0.4 dropout. This is expected, as fewer neurons and connections in the 0.8 dropout configuration make it harder to effectively minimize the training loss. Training accuracy is also higher with 0.4 dropout, as more active neurons allow for a better fit to the training data. While the test losses are fairly similar, the test accuracy for the 0.4 dropout variant is substantially better. This suggests that the 0.8 dropout variant is underfitted to the data and, as a result, has poor generalization. In contrast, the 0.4 dropout variant demonstrates good generalization and superior performance.
 
 """
 
 part2_q2 = r"""
-**Your answer:**
+Q2
 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+Yes, it is possible for test loss to increase while test accuracy improves during training with the cross-entropy loss function. This happens because loss and accuracy measure different aspects of performance. Cross-entropy loss evaluates both the correctness and confidence of predictions, penalizing less confident predictions for the correct class. In contrast, accuracy measures only the proportion of correct predictions without considering confidence. For example, the model may correctly classify more samples (increasing accuracy) but with lower confidence, leading to higher loss. Regularization techniques like dropout, noisy or hard-to-classify data, or shifts in the model's confidence can also cause this behavior. Such occurrences are often temporary and typically resolve as training progresses, but persistent increases in test loss may require adjustments to the model or training process.
 
 """
 

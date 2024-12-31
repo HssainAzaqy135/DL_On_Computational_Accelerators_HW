@@ -162,6 +162,6 @@ class RMSProp(Optimizer):
             self.grad_sqr_cache[id(p)] = cashed_grad
             
             # Update parameters using RMSProp update rule
-            intermidiate_val = dp / (torch.sqrt(cashed_grad) + self.eps)
-            p -= self.learn_rate * intermidiate_val
+            intermidiate_val = dp / (torch.sqrt(cashed_grad + self.eps)) # dtheta/sqrt(r+e)
+            p -= self.learn_rate * intermidiate_val # theta = theta - eta*dtheta/sqrt(r+e)
             # ========================
