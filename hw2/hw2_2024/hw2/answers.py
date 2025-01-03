@@ -130,29 +130,52 @@ Yes, it is possible for test loss to increase while test accuracy improves durin
 """
 
 part2_q3 = r"""
-**Your answer:**
+Q3
 
+1.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+Gradient descent is an optimization algorithm that updates model parameters to minimize a loss function by iteratively moving in the direction opposite the gradient. Backpropagation is a method specific to neural networks that calculates these gradients efficiently using the chain rule. It involves a forward pass to compute the output and loss, followed by a backward pass to determine how each parameter affects the loss. While gradient descent focuses on updating weights, backpropagation focuses on computing the gradients needed for these updates.In neural networks, backpropagation computes gradients, and gradient descent uses them to optimize the model. Gradient descent is general, while backpropagation is tailored to neural networks.
+
+2.
+
+GD and SGD are optimization techniques used to minimize a loss function by updating model parameters iteratively. The main difference lies in how they compute the gradient: GD calculates the gradient using the entire dataset, whereas SGD computes it using a single data point at a time.
+
+GD is computationally expensive for large datasets since it processes the entire dataset in every iteration, making it slower and less practical for massive data but with generally smooth and stable convergence, as it uses precise gradients calculated over all samples. GD is best suited for small or medium-sized datasets and convex optimization problems where accessing the full dataset is feasible.
+
+SGD, on the other hand, is faster per iteration because it processes only one data point at a time, which is randomly selected during each iteration. This random sampling introduces variability in the gradient, helping the algorithm avoid getting stuck in local minima and ensuring that the updates are not biased toward specific subsets of the data. Its convergence is noisier due to high variance in gradient estimates, which can slow progress but also helps escape local minima.
+
+In summary, GD offers precision and stability for smaller datasets, while SGD provides speed and scalability for large-scale machine learning tasks.
+
+3.
+
+SGD is used more often in deep learning due to its scalability, efficiency, and ability to handle large datasets.Traditional GD, requires processing the entire dataset at once. SGD updates parameters using a single data point at a time, making it highly memory-efficient and suitable for massive datasets. This frequent parameter update leads to faster convergence, especially in the early stages of training by is also more noisy. The randomness in SGD helps it escape local minima or saddle points, which is beneficial in the complex high-dimensional menifolds of neural networks. Additionally, SGD can be easily adapted with variants like Mini-batch SGD, Momentum and RMSprop to stabilize learning and improve performance. These characteristics, along with SGD's ability to generalize better and prevent overfitting, make it the preferred optimization method for deep learning tasks.
+
+4.
+
+A.
+
+The friend’s suggested approach would not produce a gradient equivalent to GD. In GD the gradient is computed over the entire dataset, averaging the gradients for each data point. In contrast, the friend’s method involves splitting the data into batches, computing the loss for each batch, summing these losses, and then performing a single backward pass on the sum of the batch losses. This approach leads to a gradient that is not averaged over the entire dataset, but rather computed on the summed batch-wise losses, resulting in a scaled gradient. The key difference is that GD computes:
+
+$\nabla L(\theta) = \frac{1}{N} \sum_{i=1}^{N} \nabla l(\theta; x_i, y_i)$
+
+while the friends approach computes:
+
+$\nabla L_{\text{total}}(\theta) = \sum_{j=1}^{K} \sum_{(x_i, y_i) \in B_j} \nabla l(\theta; x_i, y_i)$
+
+where $N$ is the total number of samples, $K$ is the number of batches, and $B_j$ represents the data in batch $j$. The difference arises because the gradient is summed, not averaged, leading to a larger step size.
+
+However, if we average the gradients across all batches, such that we include all the data and then divide by the total number of samples $N$, then the friend's method would be equivalent to GD.
+
+B.
+
+The out-of-memory error likely occurred because the memory usage accumulated over multiple batches. This can happen if intermediate results, such as activations, gradients, or other data structures, are not properly cleared or released after each batch is processed. This can lead to increased memory consumption  with each batch, eventually exceeding available memory. Additionally, large temporary variables required for forward and backward passes in deep learning models can further contribute to this issue. It can be solved by managing memory efficiently by clearing intermediate result and using memory-saving techniques like gradient accumulation.
 
 """
 
 part2_q4 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
-
+yes
 """
 
 # ==============
