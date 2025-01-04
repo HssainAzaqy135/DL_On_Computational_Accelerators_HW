@@ -174,8 +174,32 @@ The out-of-memory error likely occurred because the memory usage accumulated ove
 
 part2_q4 = r"""
 **Your answer:**
+Q4
 
-yes
+1.A.
+
+Forward mode automatic differentiation (AD) computes derivatives alongside function evaluations by traversing the computational graph in a forward direction. For a composite function $f$, it calculates both the function values and derivatives at each step. As we have $n$ such function holding these values in memory would take $O(N)$ memory complexity.
+
+To Reduce memory complexity we can discarding Intermediate Values. Instead of storing all intermediate results, only the current and previous values are retained, reducing memory usage to $O(1)$. A trade-off between memory and computation can be achieved by storing only key values (checkpoints) and recomputing others as needed.
+
+B.
+
+We can use a technique called Checkpointing to reduce memory usage in backward mode automatic differentiation (AD) by strategically storing intermediate values during the forward pass and recomputing them as needed during the backward pass. Instead of saving all n intermediate values, the computational graph is divided into $\sqrt(n)$ segments, and only the values at the boundaries of these segments (checkpoints) are stored. This reduces memory complexity from $O(n)$ to $O\sqrt(n)$.
+
+During the backward pass, any intermediate values required for gradient computations are recomputed by traversing the graph within their respective segments. Since each segment contains $\sqrt(n)$, steps.
+
+
+2.
+
+
+Memory reduction techniques such as checkpointing can be generalized to arbitrary computational graphs by strategically storing intermediate values (checkpoints) and recomputing others as needed. In forward mode AD, this involves discarding and recomputing values in a forward traversal, while in backward mode AD, checkpoints are placed at key nodes, and subgraphs are recomputed during the backward pass. They can effective for complex graphs with loops, branches, or parallel paths.
+
+
+3.
+
+The backpropagation algorithm can significantly benefit from memory reduction techniques, like checkpointing, when applied to deep architectures such as VGGs and ResNets. These architectures have numerous layers, often requiring a large amount of memory to store intermediate activations during the forward pass. Without optimization, this memory demand limits the batch size or the maximum network depth that can be trained on hardware with limited memory.
+
+By applying checkpointing, only selected intermediate activations (checkpoints) are stored during the forward pass, while others are recomputed as needed during the backward pass. This reduces memory usage allowing deeper networks or larger batch sizes to be trained without exceeding memory limits. The trade-off is additional computation for recomputation, which is often manageable compared to the gains in memory efficiency.
 """
 
 # ==============
