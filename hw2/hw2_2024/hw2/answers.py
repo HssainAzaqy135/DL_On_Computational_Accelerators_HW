@@ -184,7 +184,7 @@ To Reduce memory complexity we can discarding Intermediate Values. Instead of st
 
 B.
 
-We can use a technique called Checkpointing to reduce memory usage in backward mode automatic differentiation (AD) by strategically storing intermediate values during the forward pass and recomputing them as needed during the backward pass. Instead of saving all n intermediate values, the computational graph is divided into $\sqrt(n)$ segments, and only the values at the boundaries of these segments (checkpoints) are stored. This reduces memory complexity from $O(n)$ to $O\sqrt(n)$.
+We can use a technique called Checkpointing to reduce memory usage in backward mode automatic differentiation (AD) by strategically storing intermediate values during the forward pass and recomputing them as needed during the backward pass. Instead of saving all n intermediate values, the computational graph is divided into $\sqrt(n)$ segments, and only the values at the boundaries of these segments (checkpoints) are stored. This reduces memory complexity from $O(n)$ to $O(\sqrt(n))$.
 
 During the backward pass, any intermediate values required for gradient computations are recomputed by traversing the graph within their respective segments. Since each segment contains $\sqrt(n)$, steps.
 
@@ -244,15 +244,63 @@ def part3_optim_hp():
 
 
 part3_q1 = r"""
-**Your answer:**
+//-----------------------------//
 
+A. High optimization error:
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+High optimization error is when the model *struggles* to minimize the loss function on the training set.
+This indicates that the model is unable to effectively fit the data it is trained on (Underfitting).
+
+Possible causes can include:
+
+1. A model with low number of parameters.
+
+2. Choice of optimization algorithm or optimizer parameters.
+
+3. Vanishing/exploding gradients.
+
+4. Too low or too large of a receptive field: The receptive field is the area of input data the model can "observe" or "consider" at a time. A bad receptive field can prevent the model from capturing complex patterns or capture too complex patterns.
+
+Optimizing any of the mentioned above would help with the High optimization error. All are pretty obvious except maybe the vanishing and exploding gradients, in that case we can use gradient norm clamping between to values a and band optimize these parameters.
+
+//-----------------------------//
+
+B. High generalization error:
+
+Correlated with overfitting, a high generalization error occurs when the model performs well on the training set but not that good onthe test set. Effectively the model learned the noise or specific patterns of the training data as is rather than general features of the data set.
+
+Possible causes can include:
+
+1. High model complexity: "too many" parameters can cause overfitting.
+
+2. Training data represents the general dataset badly (Bad sampling, different distributions at training and test times).
+
+3. Lack of regularization and early stopping: supposed to reduce or at least constrain model complexity.
+
+Possible fixes:
+
+1. Lowering model complexity. (Less parameters allowed, for example a narrower or shallower network if using networks).
+
+2. Fix sampling, or using some kind of normalization , maybe even a learnable weighting between distributions at train and test time.
+
+3. Well, add regularizations like L2, L1 or even elastic net.
+
+//-----------------------------//
+
+C. High Approximation Error
+
+High approximation error happens when the model is not expressive enough to capture the underlying complexity of the data. Where the model is too simple to represent the data effectively.
+
+Possible causes can include:
+
+1. Too low model expressive capacity/parameters.
+
+2. Bad feature selection or maybe preprocessing of the input data.
+
+3. Using a non fitting hypothesis class regardless of expressive power (like using a linear model for a non-linear problem).
+
+A helpful principle would be optimizing "Population Loss", Focusing on how effectively the model captures the general data distribution rather than individual samples within said data, using techniques like batch training and ensemble methods.  
+
 
 """
 
