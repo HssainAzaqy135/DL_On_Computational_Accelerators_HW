@@ -307,26 +307,23 @@ A helpful principle would be optimizing "Population Loss", Focusing on how effec
 part3_q2 = r"""
 **Your answer:**
 
+An example for a case with Higher False Positive Rate (FPR) can be spam email detection:
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+In spam email detection, the system is focused on minimizing missed spam and can becomes overly sensitive, leading to a higher False Positive Rate (FPR). Legitimate emails may be mistakenly flagged as spam and moved to the spam folder. This can cause users to miss important emails. Finding a balance is crucial to avoid excessive false positives while effectively filtering spam.
 
+An example for a case with Higher False Negative Rate (FPR) can be credit card fraud detection:
+
+In credit card fraud detection, a higher False Negative Rate (FNR) occurs when the system fails to identify fraudulent transactions as fraud. This often happens when the model is designed to avoid inconveniencing customers by wrongly flagging legitimate transactions (minimizing false positives). As a result, some actual fraudulent transactions go undetected, allowing fraudsters to continue unauthorized activity. For example, a system might ignore small or unusual purchases that match typical customer behavior, missing signs of fraud.
 """
 
 part3_q3 = r"""
 **Your answer:**
 
+The choice of the "optimal" point on the ROC curve depends on the relative costs and risks associated with false positives (FPs) and false negatives (FNs) in each scenario.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+In the first scenario, where a person with the disease will eventually develop non-lethal symptoms that confirm the diagnosis, the primary concern is minimizing unnecessary costs and risks from false positives. False negatives are less critical since the disease will eventually be caught and treated. Here, the optimal point on the ROC curve should prioritize minimizing the False Positive Rate (FPR) while maintaining reasonable sensitivity. This approach reduces the number of patients undergoing unnecessary follow-up tests, which are expensive and involve high risks, without compromising patient safety significantly.
+
+In contrast, the second scenario involves a high probability of death if the disease is not detected early. Missing the diagnosis could result in severe consequences, making false negatives critical. In this case, the optimal point on the ROC curve should prioritize minimizing the False Negative Rate (FNR), even if it results in a higher FPR. This involves using a lower classification threshold to ensure that most patients with the disease are flagged for further testing. While this increases the number of false positives, the associated costs and risks are outweighed by the potential to save lives.
 
 """
 
@@ -335,12 +332,7 @@ part3_q4 = r"""
 **Your answer:**
 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+MLPs are not well-suited for sequential data, like text, because they do not capture the order or contextual relationships between elements in a sequence. They treat inputs as independent features, ignoring dependencies such as negations or modifiers critical for understanding sentiment. Additionally, MLPs require fixed-size inputs, which can lead to information loss through truncation or noise from padding. They also lack mechanisms to effectively represent words in context, making them inefficient for natural language tasks. Models like RNNs, LSTMs, or Transformer-based architectures are better alternatives, as they are specifically designed to handle sequential dependencies and retain context for tasks like sentiment classification.
 
 """
 # ==============
