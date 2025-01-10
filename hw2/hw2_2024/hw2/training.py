@@ -276,7 +276,21 @@ class ClassifierTrainer(Trainer):
         #  - Update parameters
         #  - Classify and calculate number of correct predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # Forward pass
+        output = self.model(X)  # Raw class scores
+        loss = self.loss_fn(output, y)  # Compute the loss
+
+        # Backward pass
+        self.optimizer.zero_grad()  # Clear previous gradients
+        loss.backward()  # Backpropagation
+
+        # Parameter update
+        self.optimizer.step()  # Update the model parameters
+
+        # Predictions and accuracy
+        predictions = self.model._classify(output)  # Predicted class indices
+        num_correct = (predictions == y).sum().item()  # Count correct predictions
+        batch_loss = loss.item()  # Convert loss tensor to a float
         # ========================
 
         return BatchResult(batch_loss, num_correct)

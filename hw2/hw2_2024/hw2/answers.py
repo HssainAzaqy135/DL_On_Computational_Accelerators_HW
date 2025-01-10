@@ -351,7 +351,10 @@ def part4_optim_hp():
     #    What you returns needs to be a callable, so either an instance of one of the
     #    Loss classes in torch.nn or one of the loss functions from torch.nn.functional.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    loss_fn = torch.nn.CrossEntropyLoss();
+    lr = 0.01  # Learning rate
+    weight_decay = 1e-4  # L2 regularization
+    momentum = 0.9  # Momentum for SGD to accelerate convergence
     # ========================
     return dict(lr=lr, weight_decay=weight_decay, momentum=momentum, loss_fn=loss_fn)
 

@@ -193,14 +193,49 @@ class ResidualBlock(nn.Module):
         #  - Don't create layers which you don't use! This will prevent
         #    correct comparison in the test.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.main_path, self.shortcut_path = [], []
+
+        # Activation function
+        activation = ACTIVATIONS[activation_type](**activation_params)
+
+        # Main path convolutions
+        for i, (out_channels, kernel_size) in enumerate(zip(channels, kernel_sizes)):
+            conv_layer = nn.Conv2d(
+                in_channels=in_channels if i == 0 else channels[i - 1],
+                out_channels=out_channels,
+                kernel_size=kernel_size,
+                stride=1,
+                padding=kernel_size // 2,  # To preserve spatial size
+                bias=True
+            )
+            self.main_path.append(conv_layer)
+            if batchnorm:
+                self.main_path.append(nn.BatchNorm2d(out_channels))
+            if dropout > 0:
+                self.main_path.append(nn.Dropout2d(dropout))
+            self.main_path.append(activation)
+
+        self.main_path = nn.Sequential(*self.main_path)
+
+        # Shortcut path (only 1x1 convolution if input and output channels differ)
+        if in_channels != channels[-1]:
+            self.shortcut_path = nn.Sequential(
+                nn.Conv2d(in_channels, channels[-1], kernel_size=1, stride=1, padding=0, bias=False)
+            )
+        else:
+            self.shortcut_path = nn.Identity()
+
+        self.relu = nn.ReLU()
+
         # ========================
 
     def forward(self, x: Tensor):
         # TODO: Implement the forward pass. Save the main and residual path to `out`.
         out: Tensor = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        main_out = self.main_path(x)
+        shortcut_out = self.shortcut_path(x)
+        return self.relu(main_out + shortcut_out)
         # ========================
         out = torch.relu(out)
         return out
