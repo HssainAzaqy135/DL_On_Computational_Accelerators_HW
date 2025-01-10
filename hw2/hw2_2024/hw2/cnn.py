@@ -283,7 +283,9 @@ class ResidualBottleneckBlock(ResidualBlock):
         #  Initialize the base class in the right way to produce the bottleneck block
         #  architecture.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        all_channels = [inner_channels[0]] + inner_channels + [in_out_channels]
+        inner_kernel_sizes_modified = [1] + inner_kernel_sizes + [1]
+        super().__init__(in_channels=in_out_channels, channels=all_channels, kernel_sizes=inner_kernel_sizes_modified, **kwargs)
         # ========================
 
 
@@ -332,7 +334,40 @@ class ResNet(CNN):
         #    2 + len(inner_channels). [1 for each 1X1 proection convolution] + [# inner convolutions].
         # - Use batchnorm and dropout as requested.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        pooling_func = POOLINGS[self.pooling_type](**self.pooling_params)
+        p = self.pool_every
+        dropout=self.dropout
+        activation_type=self.activation_type
+        activation_params=self.activation_params
+        i = 0
+        while i < len(self.channels):
+            j = (i + p) % len(self.channels) if i + p < len(self.channels) else len(self.channels)
+            channels = self.channels[i:j]
+            blockOfKernels = [3 for i in range(len(channels))]
+            
+            if self.bottleneck and in_channels == channels[0]:
+                inner_block = ResidualBottleneckBlock(in_out_channels = in_channels,
+                                                     inner_channels = channels[1:-1], 
+                                                     inner_kernel_sizes = blockOfKernels[:-2],
+                                                     batchnorm = self.batchnorm,
+                                                     dropout = dropout,
+                                                     activation_type = activation_type,
+                                                     activation_params = activation_params)
+            else: 
+                inner_block = ResidualBlock(in_channels = in_channels,
+                                           channels = channels,
+                                           kernel_sizes = blockOfKernels,
+                                           batchnorm=self.batchnorm,
+                                           dropout=dropout,
+                                           activation_params=activation_params,
+                                           activation_type=activation_type)
+            layers.append(inner_block)
+            
+            if j - i == p :
+                layers.append(pooling_func)
+
+            in_channels = channels[-1]
+            i += p
         # ========================
         seq = nn.Sequential(*layers)
         return seq
