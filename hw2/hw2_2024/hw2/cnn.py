@@ -194,7 +194,7 @@ class ResidualBlock(nn.Module):
         #    correct comparison in the test.
         # ====== YOUR CODE: ======
         self.main_path, self.shortcut_path = [], []
-
+        self.relu = nn.ReLU() # to be used in the forward
         # Activation function
         activation = ACTIVATIONS[activation_type](**activation_params)
 
@@ -204,28 +204,34 @@ class ResidualBlock(nn.Module):
                 in_channels=in_channels if i == 0 else channels[i - 1],
                 out_channels=out_channels,
                 kernel_size=kernel_size,
-                stride=1,
-                padding=kernel_size // 2,  # To preserve spatial size
+                padding=kernel_size // 2,
                 bias=True
             )
             self.main_path.append(conv_layer)
-            if batchnorm:
-                self.main_path.append(nn.BatchNorm2d(out_channels))
-            if dropout > 0:
-                self.main_path.append(nn.Dropout2d(dropout))
-            self.main_path.append(activation)
+            if i < len(channels) - 1:
+                # DropOut
+                if dropout > 0: 
+                    self.main_path.append(nn.Dropout2d(dropout))
+                # BatchNormalization
+                if batchnorm:
+                    self.main_path.append(nn.BatchNorm2d(out_channels))
+                self.main_path.append(activation)
 
         self.main_path = nn.Sequential(*self.main_path)
 
-        # Shortcut path (only 1x1 convolution if input and output channels differ)
-        if in_channels != channels[-1]:
+        # Shortcut path 
+        if in_channels != channels[-1]: # (only 1x1 convolution if input and output channels differ)
             self.shortcut_path = nn.Sequential(
-                nn.Conv2d(in_channels, channels[-1], kernel_size=1, stride=1, padding=0, bias=False)
+                nn.Conv2d(
+                    in_channels=in_channels,
+                    out_channels=channels[-1],
+                    kernel_size=1,
+                    padding=0,
+                    bias=False,  # no bias in this path
+                )
             )
         else:
             self.shortcut_path = nn.Identity()
-
-        self.relu = nn.ReLU()
 
         # ========================
 

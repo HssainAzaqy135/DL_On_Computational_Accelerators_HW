@@ -48,7 +48,6 @@ class Classifier(nn.Module, ABC):
         # TODO: Calcualtes class scores for each sample.
         # ====== YOUR CODE: ======
         z = self.forward(x)
-        return self.predict_proba_scores(z)
         # ========================
         return self.predict_proba_scores(z)
 

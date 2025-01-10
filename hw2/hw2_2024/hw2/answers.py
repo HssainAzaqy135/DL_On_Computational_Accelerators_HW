@@ -352,9 +352,9 @@ def part4_optim_hp():
     #    Loss classes in torch.nn or one of the loss functions from torch.nn.functional.
     # ====== YOUR CODE: ======
     loss_fn = torch.nn.CrossEntropyLoss();
-    lr = 0.01  # Learning rate
-    weight_decay = 1e-4  # L2 regularization
-    momentum = 0.9  # Momentum for SGD to accelerate convergence
+    lr = 0.01
+    weight_decay = 1e-4
+    momentum = 0.9
     # ========================
     return dict(lr=lr, weight_decay=weight_decay, momentum=momentum, loss_fn=loss_fn)
 
