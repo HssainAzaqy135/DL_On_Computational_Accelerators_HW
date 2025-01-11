@@ -483,28 +483,31 @@ An equation: $e^{i\pi} -1 = 0$
 
 part6_q1 = r"""
 **Your answer:**
+Q1
 
+1. 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+The model performance was poor. The model did misclassifications such as identifying dolphins as persons and failed to differentiate between dogs and cats. Also the confidence was relatively low in most of the classifications.
+
+2.
+
+Firstly the yolo5s is trained on the COCO dataset, which has predefined classe.
+COCO does not include a specific class for dolphins, so the model tries to match dolphins to the closest available class, often person due to the similarity in shape. also yolov5s is a lightweight version designed for speed, which sacrifices some accuracy. Differentiating between dogs and cats can be challenging for models trained on COCO, especially in unusual contexts, poses, or lighting.
+
+If we are not constrained by hardware or inference time, we can use larger YOLOv5 models. These models are more accurate but require more computational resources. We can also clone the model and train it ourselves with a specialized labeled dataset that includes classes like dolphins, dogs, and cats in various positions and lighting conditions.
+
+3.
+
+To attack an object detection model like YOLO using PGD, the goal is to generate small perturbations in the input image that mislead the model's predictions. YOLO relies on both classification and bounding box predictions. In PGD, the process starts by taking a copy of the original image, then iteratively adjusting it using the gradient of the loss function, which increases the model's error. The perturbation is constrained to avoid noticeable changes to the image while causing incorrect predictions.
+
+The attack targets both the classification (misclassifying objects) and localization (distorting bounding boxes or missing objects). After several iterations, the perturbations are refined to maximize the model's failure in detecting or correctly classifying objects. The effectiveness of the attack is evaluated by checking whether the model misclassifies, fails to detect, or inaccurately locates objects in the image.
+
 
 """
 
 
 part6_q2 = r"""
 **Your answer:**
-
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
 
 """
 
@@ -513,24 +516,30 @@ part6_q3 = r"""
 **Your answer:**
 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
-
+The model did terrible.
+Most humans can recognize that these pictures are of cats.(maybe except the third image).
+The model has mistaken the cat in the first pictured to a sheep because of fur and the white carpet.
+It misclassified the cat to a dog, because it really resembles a dog but you can clearly see cat features.
+Somehow it misclassified the cat in the third picture to a toilet... probably because of the blur.
 """
 
 part6_bonus = r"""
 **Your answer:**
 
+1.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+By removing the background and adding distinct features, like cat eyes, we effectively made the cat more recognizable. The absence of a distracting or camouflaging background allowed the model to focus solely on the key features of the cat, improving recognition accuracy.
+
+2.
+
+We changed the cat nose and ears to make it resemble a cat better.
+
+
+3.
+
+we added a cat head and removed the blur a little bit.
+
+
+This changes made the model recognize the cat correctly.
 
 """
