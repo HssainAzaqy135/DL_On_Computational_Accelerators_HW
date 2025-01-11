@@ -361,15 +361,59 @@ def part4_optim_hp():
 
 part4_q1 = r"""
 **Your answer:**
+Q1.1.
 
+Calculation of the number of parameters of regular block:
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+The regular block has two 3X3 convolutional layers directly operating on a 256-channel input therfore the number of paramas in first layer is:
 
+3 X 3 X 256 X 256 + 256 (bias) = 590080
+
+Second layer is exactly the same, So the final result of the total number of parameters is:
+
+2 X 590080 = 1180160 parameters
+
+Calculation of the number of parameters of bottleneck block:
+
+First layer 1x1 conv 256 to 64:
+
+1 X 1 X 256 X 64 + 64(bias) = 16,448
+
+Second layer 3x3 conv 64 to 64:
+
+3 X 3 X 64 X 64 + 64(bias) = 36,928
+
+Final layer 1x1 conv 64 to 256:
+
+1 X 1 X 64 X 256 + 256(bias) = 16,640
+
+Total number of parameters: 16,448 + 36,928 + 16,640 = 70,016
+
+2.
+Number of floating point operations can be approximately calculated in the following way:
+For the regular block:
+
+2(convolution layer) X H X W (spatial input size) X 3 X 3 (conv kernal size) X 256 (input channels) X 256 (output channels) = H X W X 1,179,648
+
+For the bottleneck block:
+
+First layer: H X W (spatial input size) X 1 X 1 (conv kernal size) X 256 (input channels) X 64 (output channels)
+
+Second layer: H X W (spatial input size) X 3 X 3 (conv kernal size) X 64 (input channels) X 64 (output channels)
+
+Final layer : H X W (spatial input size) X 1 X 1 (conv kernal size) X 64 (input channels) X 256 (output channels)
+
+Total Flops : H X W X 69,632
+
+3.
+
+The regular block and the bottleneck block differ in their ability to combine input spatially (within feature maps) and across feature maps. The regular block uses two 3×3 convolutions, both operating on the full number of input channels (256). This allows it to effectively combine spatial information within feature maps over a larger receptive field (equivalent to 5×5 for the two stacked layers). As it retains the full number of channels throughout, the regular block is better suited for capturing fine spatial details and dependencies.
+
+On the other hand, the bottleneck block includes one 3×3 convolution for spatial combination, but it operates on a reduced number of feature maps (64, reduced from 256 by a preceding 1×1 convolution). While the effective receptive field is still 5×5, the bottleneck block is less rich in spatial combination due to the dimensionality reduction. However, this reduction also makes the bottleneck block computationally more efficient.
+
+Where the bottleneck block excels is in combining information across feature maps. The 1×1 convolutions in the bottleneck block allow for selective compression and expansion of features, enabling more flexibility in feature maps and gives less weight to redundant ones. In contrast, the regular block lacks this explicit feature selection and recombination mechanism, as both its convolutions are spatially focused.
+
+In summary, the regular block is better at spatially combining information within feature maps, while the bottleneck block is more effective at combining information across feature maps as a result of 1×1 convolutions. 
 """
 
 # ==============
