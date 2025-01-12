@@ -105,8 +105,8 @@ class Trainer(abc.ABC):
                 best_acc = test_result #update best accuracy
                 epochs_without_improvement = 0  # Reset early stopping counter
 
-                # Save checkpoint if wanted
-                if checkpoints:
+                # Save checkpoint if wanted to
+                if checkpoints is not None:
                     self.save_checkpoint(checkpoints)
                 # ========================
             else:
@@ -276,15 +276,14 @@ class ClassifierTrainer(Trainer):
         #  - Update parameters
         #  - Classify and calculate number of correct predictions
         # ====== YOUR CODE: ======
-        # Forward pass
+        # Forward 
         output = self.model(X)  # Raw class scores
         loss = self.loss_fn(output, y)  # Compute the loss
 
-        # Backward pass
+        # Backward
         self.optimizer.zero_grad()  # Clear previous gradients
         loss.backward()  # Backpropagation
 
-        # Parameter update
         self.optimizer.step()  # Update the model parameters
 
         # Predictions and accuracy
@@ -310,7 +309,11 @@ class ClassifierTrainer(Trainer):
             #  - Forward pass
             #  - Calculate number of correct predictions
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            output = self.model(X)
+            predictions = self.model._classify(output)  # Predicted class indices
+            num_correct = (predictions == y).sum().item()  # Count correct predictions
+            loss = self.loss_fn(output, y)
+            batch_loss = loss.item()  # Convert loss tensor to a float
             # ========================
 
         return BatchResult(batch_loss, num_correct)

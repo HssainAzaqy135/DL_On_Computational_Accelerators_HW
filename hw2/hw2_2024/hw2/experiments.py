@@ -66,11 +66,18 @@ def cnn_experiment(
     reg=1e-3,
     # Model params
     filters_per_layer=[64],
-    layers_per_block=2,
-    pool_every=2,
+    layers_per_block=3,
+    pool_every=3,
     hidden_dims=[1024],
     model_type="cnn",
     # You can add extra configuration for your experiments here
+    activation="relu",
+    activation_params = dict(),
+    batch_norm = False,
+    dropout = 0.4,
+    bottleneck = False,
+    pooling_type="avg",
+    pooling_params = dict(kernel_size=3),
     **kw,
 ):
     """
@@ -107,7 +114,58 @@ def cnn_experiment(
     #   for you automatically.
     fit_res = None
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    dataloader_train = DataLoader(ds_train, batch_size=bs_train, shuffle=True)
+    dataloader_test = DataLoader(ds_test, batch_size=bs_test, shuffle=False) 
+
+
+    for channel, copyNumber in zip(filters_per_layer, [layers_per_block]*len(filters_per_layer)):
+        filters_per_layer = filters_per_layer + [channel] * (copyNumber-1)
+    
+
+        
+    filteredParameters = {}
+    
+    # Set excluded keys directly
+    excluded_keys = ["bottleneck", "dropout", "batchnorm"] if model_type == "cnn" else []
+    
+    # Base parameters for all models
+    modelParameters = dict(
+        in_size=(3, 32, 32),
+        out_classes=10,
+        channels=filters_per_layer,
+        pool_every=pool_every,
+        hidden_dims=hidden_dims,
+        activation_type=activation,
+        activation_params=activation_params,
+        pooling_type=pooling_type,
+        pooling_params=pooling_params,
+        batchnorm=batch_norm,
+        bottleneck=bottleneck,
+        dropout=dropout
+    )
+    
+    # Filter the parameters
+    for key, value in modelParameters.items():
+        if key not in excluded_keys:
+            filteredParameters[key] = value
+    
+    modelParameters = filteredParameters
+    
+
+    #clean the parameters for the model
+    model = ArgMaxClassifier(model_cls(**modelParameters)).to(device)
+    loss = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(params = model.parameters(),lr=lr, weight_decay=reg)
+    
+    trainer = ClassifierTrainer(model, 
+                                loss, 
+                                optimizer, 
+                                device=device)
+    fit_res = trainer.fit(dl_train = dataloader_train,
+                         dl_test = dataloader_test,
+                         num_epochs = epochs,
+                         early_stopping = early_stopping,
+                         checkpoints = checkpoints)
     # ========================
 
     save_experiment(run_name, out_dir, cfg, fit_res)

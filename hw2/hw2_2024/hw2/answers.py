@@ -487,7 +487,7 @@ Q1
 
 1. 
 
-The model performance was poor. The model did misclassifications such as identifying dolphins as persons and failed to differentiate between dogs and cats. Also the confidence was relatively low in most of the classifications.
+The model performance was poor. The model did misclassifications such as identifying dolphins as people and failed to differentiate between dogs and cats. Also the confidence was relatively low in most of the classifications.
 
 2.
 
