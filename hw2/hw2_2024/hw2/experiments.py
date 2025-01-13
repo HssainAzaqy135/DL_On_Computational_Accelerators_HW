@@ -77,7 +77,7 @@ def cnn_experiment(
     dropout = 0.4,
     bottleneck = False,
     pooling_type="avg",
-    pooling_params = dict(kernel_size=3),
+    pooling_params = dict(kernel_size=2),
     **kw,
 ):
     """
@@ -141,7 +141,8 @@ def cnn_experiment(
         pooling_params=pooling_params,
         batchnorm=batch_norm,
         bottleneck=bottleneck,
-        dropout=dropout
+        dropout=dropout,
+        conv_params=dict(kernel_size=2, stride=1, padding=1)
     )
     
     # Filter the parameters
@@ -149,9 +150,8 @@ def cnn_experiment(
         if key not in excluded_keys:
             filteredParameters[key] = value
     
-    modelParameters = filteredParameters
+    modelParameters = filteredParameters if model_type == "cnn" else modelParameters
     
-
     #clean the parameters for the model
     model = ArgMaxClassifier(model_cls(**modelParameters)).to(device)
     loss = torch.nn.CrossEntropyLoss()
