@@ -124,31 +124,28 @@ For the graphs comparing 0.4 dropout and 0.8 dropout, we observe that the traini
 part2_q2 = r"""
 Q2
 
-
-Yes, it is possible for test loss to increase while test accuracy improves during training with the cross-entropy loss function. This happens because loss and accuracy measure different aspects of performance. Cross-entropy loss evaluates both the correctness and confidence of predictions, penalizing less confident predictions for the correct class. In contrast, accuracy measures only the proportion of correct predictions without considering confidence. For example, the model may correctly classify more samples (increasing accuracy) but with lower confidence, leading to higher loss. Regularization techniques like dropout, noisy or hard-to-classify data, or shifts in the model's confidence can also cause this behavior. Such occurrences are often temporary and typically resolve as training progresses, but persistent increases in test loss may require adjustments to the model or training process.
+Yes, given a cross entropy loss function,it is possible for a test loss to increase while test accuracy improves during training. This loss function evaluates how the predictions are confident in their correctness, giving penalties to less confident decisions. but accuracy measures only the correct predictions without considering confidence. for example the model can correctly classify more samples that results in increased accuracy but with lower confidence, leading to higher loss. There are few things that may cause a situation like this: noisy or complex data and dropout. This often temporary and goes away as we keep training the model.
 
 """
 
 part2_q3 = r"""
-Q3
-
 1.
 
-Gradient descent is an optimization algorithm that updates model parameters to minimize a loss function by iteratively moving in the direction opposite the gradient. Backpropagation is a method specific to neural networks that calculates these gradients efficiently using the chain rule. It involves a forward pass to compute the output and loss, followed by a backward pass to determine how each parameter affects the loss. While gradient descent focuses on updating weights, backpropagation focuses on computing the gradients needed for these updates.In neural networks, backpropagation computes gradients, and gradient descent uses them to optimize the model. Gradient descent is general, while backpropagation is tailored to neural networks.
+In gradient descent we update model parameters to minimize a loss function by moving in the direction of the steepest descent. In backpropagation we calculate these gradients efficiently using the chain rule. It uses a forward pass to compute the output and loss, and then a backward pass to determine how the loss is affected by each parameter. In short gradient descent updates weights, backpropagation focuses on computing the gradients needed for the weight updates. When discussing neural networks, backpropagation computes gradients, and gradient descent uses them to optimize the model. Gradient descent is a general algorithm, while backpropagation is used in neural networks.
 
 2.
 
-GD and SGD are optimization techniques used to minimize a loss function by updating model parameters iteratively. The main difference lies in how they compute the gradient: GD calculates the gradient using the entire dataset, whereas SGD computes it using a single data point at a time.
+GD and SGD are both optimization techniques that minimize a loss function by updating model parameters. The main difference between them is how they compute the gradient: GD calculates the gradient using the entire dataset, and SGD computes it using a single data point at every time.
 
-GD is computationally expensive for large datasets since it processes the entire dataset in every iteration, making it slower and less practical for massive data but with generally smooth and stable convergence, as it uses precise gradients calculated over all samples. GD is best suited for small or medium-sized datasets and convex optimization problems where accessing the full dataset is feasible.
+GD is expensive computationally  for large datasets because every iteration has to calculate this dataset. Making it slower for massive data but with slow and steady convergence as the calculation are precise because they are performed on the whole database. GD is good for small or medium-sized datasets or convex optimization problems where convergence is fast.
 
-SGD, on the other hand, is faster per iteration because it processes only one data point at a time, which is randomly selected during each iteration. This random sampling introduces variability in the gradient, helping the algorithm avoid getting stuck in local minima and ensuring that the updates are not biased toward specific subsets of the data. Its convergence is noisier due to high variance in gradient estimates, which can slow progress but also helps escape local minima.
+SGD is faster because it processes only one data point at a time which is selected randomly. This random selection helps the algorithm avoid getting stuck in local minimum points and ensure that the updates are not biased toward some small dataset. The convergence will be with bigger noise, which can make progress slower but also can help to escape local minimum point.
 
-In summary, GD offers precision and stability for smaller datasets, while SGD provides speed and scalability for large-scale machine learning tasks.
+In summary, GD offers precise and stable smaller datasets, while SGD provides faster solution that better fits huge datasets.
 
 3.
 
-SGD is used more often in deep learning due to its scalability, efficiency, and ability to handle large datasets.Traditional GD, requires processing the entire dataset at once. SGD updates parameters using a single data point at a time, making it highly memory-efficient and suitable for massive datasets. This frequent parameter update leads to faster convergence, especially in the early stages of training by is also more noisy. The randomness in SGD helps it escape local minima or saddle points, which is beneficial in the complex high-dimensional menifolds of neural networks. Additionally, SGD can be easily adapted with variants like Mini-batch SGD, Momentum and RMSprop to stabilize learning and improve performance. These characteristics, along with SGD's ability to generalize better and prevent overfitting, make it the preferred optimization method for deep learning tasks.
+SGD is used more often in deep learning because it is efficient on large dataset . Traditional GD, requires processing the entire dataset at once. SGD updates parameters using a single data point at each time, making it memory efficient for massive datasets. This parameter makes the convergence faster. The randomness in SGD can help it to escape local minimum points, which is beneficial in the complex high-dimensional menifolds of neural networks. Additionally, SGD can be easily adapted with variants like Mini-batch SGD, Momentum and RMSprop to stabilize learning and improve performance. These characteristics, along with SGD's ability to generalize better and prevent overfitting, make it the preferred optimization method for deep learning.
 
 4.
 
@@ -178,28 +175,28 @@ Q4
 
 1.A.
 
-Forward mode automatic differentiation (AD) computes derivatives alongside function evaluations by traversing the computational graph in a forward direction. For a composite function $f$, it calculates both the function values and derivatives at each step. As we have $n$ such function holding these values in memory would take $O(N)$ memory complexity.
+Forward mode automatic diff computes derivatives alongside function evaluations by traversing the computational graph in a forward direction. For a composite function $f$, it calculates both the function values and derivatives at each step. As we have $n$ such function holding these values in memory would take $O(N)$ memory complexity.
 
-To Reduce memory complexity we can discarding Intermediate Values. Instead of storing all intermediate results, only the current and previous values are retained, reducing memory usage to $O(1)$. A trade-off between memory and computation can be achieved by storing only key values (checkpoints) and recomputing others as needed.
+To Reduce memory complexity we can discarding Intermediate Values. Instead of storing all intermediate results, only the current and previous values are retained, reducing memory usage to $O(1)$. A tradeoff between memory and computation can be achieved by storing only key values and recomputing others as needed.
 
 B.
 
-We can use a technique called Checkpointing to reduce memory usage in backward mode automatic differentiation (AD) by strategically storing intermediate values during the forward pass and recomputing them as needed during the backward pass. Instead of saving all n intermediate values, the computational graph is divided into $\sqrt(n)$ segments, and only the values at the boundaries of these segments (checkpoints) are stored. This reduces memory complexity from $O(n)$ to $O(\sqrt(n))$.
+we can use a technique called Checkpointing to reduce memory using in backward mode automatic diff by strategically storing intermediate values during the forward pass and recomputing them as needed during the backward pass. Instead of saving all n intermediate values, the computational graph is divided to $\sqrt(n)$ segments, and only the values at the boundaries of these segments are stored. This reduces memory complexity from $O(n)$ to $O(\sqrt(n))$.
 
-During the backward pass, any intermediate values required for gradient computations are recomputed by traversing the graph within their respective segments. Since each segment contains $\sqrt(n)$, steps.
+Doing the backward pass, any intermediate values required for gradient computations are recomputed by traversing the graph within their respective segments. Since each segment contains $\sqrt(n)$, steps.
 
 
 2.
 
 
-Memory reduction techniques such as checkpointing can be generalized to arbitrary computational graphs by strategically storing intermediate values (checkpoints) and recomputing others as needed. In forward mode AD, this involves discarding and recomputing values in a forward traversal, while in backward mode AD, checkpoints are placed at key nodes, and subgraphs are recomputed during the backward pass. They can effective for complex graphs with loops, branches, or parallel paths.
+memory reduction techniques such as checkpointing can be generalized to arbitrary computational graphs by strategically storing intermediate values and recomputing others as needed. In forward mode AD, this involves discarding and recomputing values in a forward traversal, while in backward mode AD, checkpoints are placed at key nodes, and subgraphs are recomputed during the backward pass. They can effective for complex graphs with loops, branches, or parallel paths.
 
 
 3.
 
-The backpropagation algorithm can significantly benefit from memory reduction techniques, like checkpointing, when applied to deep architectures such as VGGs and ResNets. These architectures have numerous layers, often requiring a large amount of memory to store intermediate activations during the forward pass. Without optimization, this memory demand limits the batch size or the maximum network depth that can be trained on hardware with limited memory.
+The backpropagation algorithm can  benefit from memory reduction techniques, like checkpointing, when applied to deep architectures such as VGGs and ResNets. These architectures have numerous layers, often requiring a large amount of memory to store intermediate activations during the forward pass. Without optimization, this memory demand limits the batch size or the maximum network depth that can be trained on hardware with limited memory.
 
-By applying checkpointing, only selected intermediate activations (checkpoints) are stored during the forward pass, while others are recomputed as needed during the backward pass. This reduces memory usage allowing deeper networks or larger batch sizes to be trained without exceeding memory limits. The trade-off is additional computation for recomputation, which is often manageable compared to the gains in memory efficiency.
+By applying checkpointing, only selected intermediate activations are stored during the forward pass, while others are recomputed as needed during the backward pass. This reduces memory usage allowing deeper networks or larger batch sizes to be trained without exceeding memory limits. The trade off is additional computation for recomputation, which is often manageable compared to the gains in memory efficiency.
 """
 
 # ==============
@@ -269,7 +266,7 @@ B. High generalization error:
 
 Correlated with overfitting, a high generalization error occurs when the model performs well on the training set but not that good onthe test set. Effectively the model learned the noise or specific patterns of the training data as is rather than general features of the data set.
 
-Possible causes can include:
+Possible causes may and can include:
 
 1. High model complexity: "too many" parameters can cause overfitting.
 
@@ -307,23 +304,27 @@ A helpful principle would be optimizing "Population Loss", Focusing on how effec
 part3_q2 = r"""
 **Your answer:**
 
-An example for a case with Higher False Positive Rate (FPR) can be spam email detection:
+1. An example for a case that favours or doesn't care so much about higher false positive rate can be spam email detection:
 
-In spam email detection, the system is focused on minimizing missed spam and can becomes overly sensitive, leading to a higher False Positive Rate (FPR). Legitimate emails may be mistakenly flagged as spam and moved to the spam folder. This can cause users to miss important emails. Finding a balance is crucial to avoid excessive false positives while effectively filtering spam.
+In spam mail detection, the system is focused on minimizing missed spam and can becomes overly sensitive, leading to a higher fpr.
+Normal mails may be falsefully flagged as spams and moved to spam folders and such. Things like this can cause users to miss important mails. Finding a specific balance is important to avoid excessive false positives while effectively filtering said spam at the same time.
 
-An example for a case with Higher False Negative Rate (FPR) can be credit card fraud detection:
+2. An example for a case that favours higher false negative rate can be credit card scam detection:
 
-In credit card fraud detection, a higher False Negative Rate (FNR) occurs when the system fails to identify fraudulent transactions as fraud. This often happens when the model is designed to avoid inconveniencing customers by wrongly flagging legitimate transactions (minimizing false positives). As a result, some actual fraudulent transactions go undetected, allowing fraudsters to continue unauthorized activity. For example, a system might ignore small or unusual purchases that match typical customer behavior, missing signs of fraud.
+Given the case of credit card fraud detection, a higher false negative rate is when the system fails to identify scams as fraud which we don't want at all.
+This often happens when the model is designed to avoid annoying customers by wrongly or falsefuly classifying normal and real transactions trying to minimize false positives.
+Therefore, some actual malicious deals go uder the radar, allowing scammers to continue scamming. For instance, a system might ignore small or unusual purchases that match regular clients/customers behaviors, missing signs of scams/frauds since they aren't significant enough.
 """
 
 part3_q3 = r"""
 **Your answer:**
 
-The choice of the "optimal" point on the ROC curve depends on the relative costs and risks associated with false positives (FPs) and false negatives (FNs) in each scenario.
+The choice of the "optimal" point on a ROC curve depends on the costs and risks correlated with false positives and false negatives in each scenario.
 
-In the first scenario, where a person with the disease will eventually develop non-lethal symptoms that confirm the diagnosis, the primary concern is minimizing unnecessary costs and risks from false positives. False negatives are less critical since the disease will eventually be caught and treated. Here, the optimal point on the ROC curve should prioritize minimizing the False Positive Rate (FPR) while maintaining reasonable sensitivity. This approach reduces the number of patients undergoing unnecessary follow-up tests, which are expensive and involve high risks, without compromising patient safety significantly.
+In the first scenario, where a person with the disease will eventually develop non-lethal symptoms that confirm the diagnosis, the primary concern is minimizing unnecessary costs and risks from false positives. False negatives are less crucial since the disease will eventually be identified and treated. In this case, the optimal point on the ROC curve should prioritize minimal FPR while maintaining balanced sensitivity.
 
-In contrast, the second scenario involves a high probability of death if the disease is not detected early. Missing the diagnosis could result in severe consequences, making false negatives critical. In this case, the optimal point on the ROC curve should prioritize minimizing the False Negative Rate (FNR), even if it results in a higher FPR. This involves using a lower classification threshold to ensure that most patients with the disease are flagged for further testing. While this increases the number of false positives, the associated costs and risks are outweighed by the potential to save lives.
+On the other hand, the second scenario includes a high probability of death if the disease is not found on the patient as early as possible. Miss classifying could be very bad, making false negatives is critical.
+In such a case, the best point on a ROC curve should prioritize minimizing the false negative rate, even if it results in a higher FPR. This can involve using a lower threshold to make sure that most patients with the disease are classified correct. Still this will increase the number of false positives, the associated costs and risks are outweighed by the potential saved lives.
 
 """
 
@@ -331,8 +332,9 @@ In contrast, the second scenario involves a high probability of death if the dis
 part3_q4 = r"""
 **Your answer:**
 
-
-MLPs are not well-suited for sequential data, like text, because they do not capture the order or contextual relationships between elements in a sequence. They treat inputs as independent features, ignoring dependencies such as negations or modifiers critical for understanding sentiment. Additionally, MLPs require fixed-size inputs, which can lead to information loss through truncation or noise from padding. They also lack mechanisms to effectively represent words in context, making them inefficient for natural language tasks. Models like RNNs, LSTMs, or Transformer-based architectures are better alternatives, as they are specifically designed to handle sequential dependencies and retain context for tasks like sentiment classification.
+MLPs are not well suited for sequential data, like text, because they do not capture the order or contextual relationships between elements in a sequence. They treat inputs as independent features, ignoring dependencies such as negations that are important for understanding sentiment. 
+In addition, mlps require inputs of fixed sizes and dimensions, which can cause information loss through truncating the inputs or noise from padding said inputs. 
+They also lack the ability to effectively represent words in a certain context, making them not so good for natural language tasks. Models similar to RNNs, LSTMs are better options. We saw that they are better for tasks like sentiment analyse.
 
 """
 # ==============
@@ -377,15 +379,15 @@ Calculation of the number of parameters of bottleneck block:
 
 First layer 1x1 conv 256 to 64:
 
-1 X 1 X 256 X 64 + 64(bias) = 16,448
+1 X 1 X 256 X 64 + 64 (bias) = 16,448
 
 Second layer 3x3 conv 64 to 64:
 
-3 X 3 X 64 X 64 + 64(bias) = 36,928
+3 X 3 X 64 X 64 + 64 (bias) = 36,928
 
 Final layer 1x1 conv 64 to 256:
 
-1 X 1 X 64 X 256 + 256(bias) = 16,640
+1 X 1 X 64 X 256 + 256 (bias) = 16,640
 
 Total number of parameters: 16,448 + 36,928 + 16,640 = 70,016
 
@@ -425,52 +427,40 @@ In summary, the regular block is better at spatially combining information withi
 part5_q1 = r"""
 **Your answer:**
 
+Part1: 
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+We clearly see that we seam to reach peak performance at **2** layers, and we think this is because of mainly two things. First, we reduced the dataset to around 128*250 = 320000 training examples and and about 5400 test samples, so maybe in a sense 4 layers or more is way too much  parameters to train like we saw in class given this experiment was done using a basic cnn.
+Moreover, we first tried using all 60k samples for training and 10k for testing and actually L = 4 came out on top. We reduced the dataset for runtime purposes. So we conclude that with enough samples, more layers should be better given unbound or very large compute power and time. 
+
+Part2:
+We clearly see that for L=8,16 the network wan't trainable . This may be due maybe vanishing gradients, or the fact that the deeper the network the more pooling we do with this setup. Maybe the "information loss" is way too much together with vanishing gradients for a network to be trainable.
 
 """
 
 part5_q2 = r"""
 **Your answer:**
-
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+First of all, compared to experiment 1_1, in this experiment we get a significant bump in training accuracy and a mild bump in test accuracy across the board.
+Interestingly, in this case we see that more kernels are better given more layers. which should mke sense since the kernels maybe are not "utilized" enough with low layers like 2 or 3, yet with 4 they help way more.
+All networks here are trainable , since they are not that deep and the kernels theselves aren't effected by the problems stated before for the same reason.
 
 """
 
 part5_q3 = r"""
 **Your answer:**
 
-
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+We can see clearly here that 2 layers perform way better than 3,4. This maybe due to various factors, we think that maybe this is caused by the first layer extracting some "mapping" and the rest of the layers are just added noise and trainable parameters that are dependant at training time on the many kernels applied beforehand.
+We have this suspision since for L = 3,4 the accuracy for train and test time is 10%, which isn't good, not that much better than guessing 1 out of 10 classes.
 
 """
 
 part5_q4 = r"""
 **Your answer:**
 
+This time we are using a ResNet architecture.
+As shown in the plots, in the first part, there is no vanishing gradients problem. we have that with k = 32 , the more layers the better. There is no vanishing gradients problem. Notice that even though the performance on the test set stayed the same compare to 1_1 and 1_3 the same. the training accuracy is closer to the test accuracy, suggesting way less overfitting.
 
-Write your answer using **markdown** and $\LaTeX$:
-```python
-# A code block
-a = 2
-```
-An equation: $e^{i\pi} -1 = 0$
+In the second part , with way higher K, we have that for L = 4 the performance peaked. Specifically the train and test accuracy are way better than 1_1 and 1_3.
+We conclude that there is a specific balance to be maintained between K and L. Not a linear relation.
 
 """
 
