@@ -78,6 +78,7 @@ def cnn_experiment(
     bottleneck = False,
     pooling_type="avg",
     pooling_params = dict(kernel_size=2),
+    conv_params=dict(kernel_size=2, stride=1, padding=1),
     **kw,
 ):
     """
@@ -114,21 +115,21 @@ def cnn_experiment(
     #   for you automatically.
     fit_res = None
     # ====== YOUR CODE: ======
-    dataloader_train = DataLoader(ds_train, batch_size=bs_train, shuffle=True)
-    dataloader_test = DataLoader(ds_test, batch_size=bs_test, shuffle=False) 
+    train_indices = list(range(batches * bs_train))  # Limit training samples
+    test_indices = list(range(batches * bs_test))  # Limit test samples
+    limited_ds_train = torch.utils.data.Subset(ds_train, train_indices)
+    limited_ds_test = torch.utils.data.Subset(ds_test, test_indices)
 
+    dataloader_train = DataLoader(limited_ds_train, batch_size=bs_train, shuffle=True)
+    dataloader_test = DataLoader(limited_ds_test, batch_size=bs_test, shuffle=False)
 
-    for channel, copyNumber in zip(filters_per_layer, [layers_per_block]*len(filters_per_layer)):
-        filters_per_layer = filters_per_layer + [channel] * (copyNumber-1)
-    
+    # Prepare model parameters
+    for channel, copyNumber in zip(filters_per_layer, [layers_per_block] * len(filters_per_layer)):
+        filters_per_layer = filters_per_layer + [channel] * (copyNumber - 1)
 
-        
     filteredParameters = {}
-    
-    # Set excluded keys directly
     excluded_keys = ["bottleneck", "dropout", "batchnorm"] if model_type == "cnn" else []
-    
-    # Base parameters for all models
+
     modelParameters = dict(
         in_size=(3, 32, 32),
         out_classes=10,
@@ -142,30 +143,33 @@ def cnn_experiment(
         batchnorm=batch_norm,
         bottleneck=bottleneck,
         dropout=dropout,
-        conv_params=dict(kernel_size=2, stride=1, padding=1)
+        conv_params=conv_params
     )
-    
-    # Filter the parameters
+
     for key, value in modelParameters.items():
         if key not in excluded_keys:
             filteredParameters[key] = value
-    
+
     modelParameters = filteredParameters if model_type == "cnn" else modelParameters
-    
-    #clean the parameters for the model
+
     model = ArgMaxClassifier(model_cls(**modelParameters)).to(device)
     loss = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(params = model.parameters(),lr=lr, weight_decay=reg)
-    
-    trainer = ClassifierTrainer(model, 
-                                loss, 
-                                optimizer, 
-                                device=device)
-    fit_res = trainer.fit(dl_train = dataloader_train,
-                         dl_test = dataloader_test,
-                         num_epochs = epochs,
-                         early_stopping = early_stopping,
-                         checkpoints = checkpoints)
+    optimizer = torch.optim.Adam(params=model.parameters(), lr=lr, weight_decay=reg)
+
+    trainer = ClassifierTrainer(
+        model,
+        loss,
+        optimizer,
+        device=device
+    )
+
+    fit_res = trainer.fit(
+        dl_train=dataloader_train,
+        dl_test=dataloader_test,
+        num_epochs=epochs,
+        early_stopping=early_stopping,
+        checkpoints=checkpoints
+    )
     # ========================
 
     save_experiment(run_name, out_dir, cfg, fit_res)
