@@ -129,6 +129,8 @@ Yes, given a cross entropy loss function,it is possible for a test loss to incre
 """
 
 part2_q3 = r"""
+Q3
+
 1.
 
 In gradient descent we update model parameters to minimize a loss function by moving in the direction of the steepest descent. In backpropagation we calculate these gradients efficiently using the chain rule. It uses a forward pass to compute the output and loss, and then a backward pass to determine how the loss is affected by each parameter. In short gradient descent updates weights, backpropagation focuses on computing the gradients needed for the weight updates. When discussing neural networks, backpropagation computes gradients, and gradient descent uses them to optimize the model. Gradient descent is a general algorithm, while backpropagation is used in neural networks.
