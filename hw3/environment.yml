@@ -22,9 +22,9 @@ dependencies:
   - swig # needed to compile box2d
   - tqdm
   - pip:
-    - nbmerge
-    - transformers
-    - datasets
+      - nbmerge
+      - transformers
+      - datasets
   # pytorch
   # Note for M1 macs: install this env with CONDA_SUBDIR=osx-64 (env var), as it
   # can't be installed for the native (osx-arm64) architecture.
@@ -33,6 +33,5 @@ dependencies:
   - cudatoolkit
   - torchvision
   - torchtext
-
-platforms:
-  - linux-64
+# platforms:
+#   - linux-64
