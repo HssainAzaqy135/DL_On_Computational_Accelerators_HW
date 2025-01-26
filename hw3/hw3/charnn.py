@@ -86,7 +86,12 @@ def onehot_to_chars(embedded_text: Tensor, idx_to_char: dict) -> str:
     """
     # TODO: Implement the reverse-embedding.
     # ====== YOUR CODE: ======
+    result = ''
     
+    for row in embedded_text:  
+        idx = torch.argmax(row).item()  
+        char = idx_to_char[idx]  
+        result += char  
     # ========================
     return result
 
@@ -115,7 +120,17 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     #  3. Create the labels tensor in a similar way and convert to indices.
     #  Note that no explicit loops are required to implement this function.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    
+    # covert to embedding
+    embedded_text = chars_to_onehot(text, char_to_idx).to(device)
+    
+    # split into groups of size seq_len
+    num_samples = (embedded_text.size(0) - 1) // seq_len
+    samples = embedded_text[:num_samples * seq_len].view(num_samples, seq_len, -1)
+    
+    # create labels
+    label_indices = torch.tensor([char_to_idx[char] for char in text[1:]] + [char_to_idx[text[0]]] ).to(device)
+    labels = label_indices[:num_samples * seq_len].view(num_samples, seq_len)
     # ========================
     return samples, labels
 
@@ -200,7 +215,15 @@ class SequenceBatchSampler(torch.utils.data.Sampler):
         #  you can drop it.
         idx = None  # idx should be a 1-d list of indices.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        idx = []
+        
+        num_batches = len(self.dataset) // self.batch_size
+        
+        for start in range(num_batches):
+            for i in range(self.batch_size):
+                idx.append(start + i*num_batches)
+        
+        return iter(idx)
         # ========================
         return iter(idx)
 
