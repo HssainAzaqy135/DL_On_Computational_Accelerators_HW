@@ -146,7 +146,9 @@ def hot_softmax(y, dim=0, temperature=1.0):
     """
     # TODO: Implement based on the above.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    numerator = torch.exp((y-torch.max(y))/temperature)
+    # Calculate Softmax
+    result = numerator / torch.sum(numerator, axis=dim)
     # ========================
     return result
 
@@ -182,7 +184,35 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
     #  necessary for this. Best to disable tracking for speed.
     #  See torch.no_grad().
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    with torch.no_grad():
+        input_sequence = start_sequence
+        hidden_state = None
+
+        while len(out_text) < n_chars:
+            # Convert the input sequence to one-hot encoded tensor
+            input_tensor = chars_to_onehot(input_sequence, char_to_idx).to(dtype=torch.float, device=device)
+            input_tensor = input_tensor.unsqueeze(0)  # Add batch dimension (1, seq_len, num_chars)
+
+            # Feed the input sequence into the model
+            output, hidden_state = model(input_tensor, hidden_state)
+
+            # Extract the last character's output, removing the batch dimension
+            last_char_output = output.squeeze(0)[-1]
+
+            # Apply temperature-based softmax to get the probabilities for sampling
+            probabilities = hot_softmax(last_char_output, temperature=T)
+
+            # Sample a character index based on the probabilities
+            sampled_char_idx = torch.multinomial(probabilities, num_samples=1).item()
+
+            # Convert the sampled index back to a character
+            sampled_char = idx_to_char[sampled_char_idx]
+
+            # Append the sampled character to the generated text
+            out_text += sampled_char
+
+            # Update the input for the next iteration (use the sampled character)
+            input_sequence = sampled_char
     # ========================
 
     return out_text
@@ -257,7 +287,35 @@ class MultilayerGRU(nn.Module):
         # TODO: READ THIS SECTION!!
 
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        dropout_layer = nn.Dropout(dropout)
+        
+        for k in range(n_layers):
+            # Weights initialization
+            W_xz = nn.Linear(in_dim, h_dim, bias=False)
+            W_xr = nn.Linear(in_dim, h_dim, bias=False)
+            W_xg = nn.Linear(in_dim, h_dim, bias=False)
+            W_hz = nn.Linear(h_dim, h_dim, bias=True)
+            W_hr = nn.Linear(h_dim, h_dim, bias=True)
+            W_hg = nn.Linear(h_dim, h_dim, bias=True)
+
+            # Add layers
+            self.add_module(f'layer_{k}: W_xz', W_xz)
+            self.add_module(f'layer_{k}: W_xr', W_xr)
+            self.add_module(f'layer_{k}: W_xg', W_xg)
+            self.add_module(f'layer_{k}: W_hz', W_hz)
+            self.add_module(f'layer_{k}: W_hr', W_hr)
+            self.add_module(f'layer_{k}: W_hg', W_hg)
+            self.add_module(f'layer_{k}: dropout', dropout_layer)
+
+            # Add params to layer params list
+            self.layer_params.extend([W_xz, W_xr, W_xg, W_hz, W_hr, W_hg, dropout_layer])
+
+            # Update input dimension for next layer
+            in_dim = h_dim
+
+        # Final output layer
+        self.W_hy = nn.Linear(h_dim, out_dim, bias=True)
+        self.add_module('W_hy', self.W_hy)
         # ========================
 
     def forward(self, input: Tensor, hidden_state: Tensor = None):
@@ -291,7 +349,39 @@ class MultilayerGRU(nn.Module):
 
         # TODO: READ THIS SECTION!!
         # ====== YOUR CODE: ======
-        # Loop over layers of the model
-        raise NotImplementedError()
+        sigmoid = nn.Sigmoid()
+        tanh = nn.Tanh()
+        output_sequence = []
+
+        for timestep in range(seq_len):
+            input_timestep = input[:, timestep, :]
+    
+            for layer_idx in range(0, len(self.layer_params), 7):
+                # Extract the 7 parameters for the current layer
+                W_xz, W_xr, W_xg, W_hz, W_hr, W_hg, dropout_layer = tuple(self.layer_params[layer_idx:layer_idx + 7])
+
+                # Get the previous hidden state for the current layer
+                hidden_state_prev_layer = layer_states[layer_idx // 7]
+
+                # GRU calculations for update gate (z), reset gate (r), and candidate state (g)
+                z = sigmoid(W_xz(input_timestep) + W_hz(hidden_state_prev_layer))
+                r = sigmoid(W_xr(input_timestep) + W_hr(hidden_state_prev_layer))
+                g = tanh(W_xg(input_timestep) + W_hg(r * hidden_state_prev_layer))
+
+                # Update the hidden state for this layer
+                new_hidden_state = z * hidden_state_prev_layer + (1 - z) * g
+
+                # Apply dropout to the new hidden state and update the input for the next layer
+                input_timestep = dropout_layer(new_hidden_state)
+
+                # Save the updated hidden state for this layer
+                layer_states[layer_idx // 7] = new_hidden_state
+
+            # Append the output of the last layer for the current timestep
+            output_sequence.append(self.W_hy(input_timestep))
+
+        # Stack the outputs to form the final sequence output and the hidden states across layers
+        layer_output = torch.stack(output_sequence, dim=1)
+        hidden_state = torch.stack(layer_states, dim=1)
         # ========================
         return layer_output, hidden_state
