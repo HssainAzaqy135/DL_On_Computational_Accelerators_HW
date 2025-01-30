@@ -26,7 +26,6 @@ def char_maps(text: str):
     unique_chars = sorted(set(text))
     char_to_idx = {char: idx for idx, char in enumerate(unique_chars)}
     idx_to_char = {idx: char for char, idx in char_to_idx.items()}
-    return char_to_idx, idx_to_char
     # ========================
     return char_to_idx, idx_to_char
 
@@ -124,11 +123,11 @@ def chars_to_labelled_samples(text: str, char_to_idx: dict, seq_len: int, device
     # covert to embedding
     embedded_text = chars_to_onehot(text, char_to_idx).to(device)
     
-    # split into groups of size seq_len
-    num_samples = (embedded_text.size(0) - 1) // seq_len
+    # splitting into groups of size seq_len
+    num_samples = (embedded_text.size(0) - 1) // seq_len #last char has no label
     samples = embedded_text[:num_samples * seq_len].view(num_samples, seq_len, -1)
     
-    # create labels
+    # make labels
     label_indices = torch.tensor([char_to_idx[char] for char in text[1:]] + [char_to_idx[text[0]]] ).to(device)
     labels = label_indices[:num_samples * seq_len].view(num_samples, seq_len)
     # ========================
@@ -189,30 +188,28 @@ def generate_from_model(model, start_sequence, n_chars, char_maps, T):
         hidden_state = None
 
         while len(out_text) < n_chars:
-            # Convert the input sequence to one-hot encoded tensor
+            # input sequence to one-hot encoded tensor
             input_tensor = chars_to_onehot(input_sequence, char_to_idx).to(dtype=torch.float, device=device)
             input_tensor = input_tensor.unsqueeze(0)  # Add batch dimension (1, seq_len, num_chars)
 
-            # Feed the input sequence into the model
             output, hidden_state = model(input_tensor, hidden_state)
 
-            # Extract the last character's output, removing the batch dimension
+            # Extract the last chars output, removing the batch dimension
             last_char_output = output.squeeze(0)[-1]
 
             # Apply temperature-based softmax to get the probabilities for sampling
             probabilities = hot_softmax(last_char_output, temperature=T)
 
-            # Sample a character index based on the probabilities
+            # Sample a char index
             sampled_char_idx = torch.multinomial(probabilities, num_samples=1).item()
-
-            # Convert the sampled index back to a character
+            # Extract char
             sampled_char = idx_to_char[sampled_char_idx]
-
-            # Append the sampled character to the generated text
-            out_text += sampled_char
 
             # Update the input for the next iteration (use the sampled character)
             input_sequence = sampled_char
+            # Append sampled char to generated text
+            out_text += sampled_char
+
     # ========================
 
     return out_text

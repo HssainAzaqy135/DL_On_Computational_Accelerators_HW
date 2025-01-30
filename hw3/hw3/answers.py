@@ -22,7 +22,14 @@ def part1_rnn_hyperparams():
     )
     # TODO: Set the hyperparameters to train the model.
     # ====== YOUR CODE: ======
-    
+    hypers['batch_size'] = 64
+    hypers['seq_len'] = 80 # all chars, start and end
+    hypers['h_dim'] = 100
+    hypers['n_layers'] = 3
+    hypers['dropout'] = 0.25
+    hypers['learn_rate'] = 2e-3
+    hypers['lr_sched_factor'] = 1e-1
+    hypers['lr_sched_patience'] = 4
     # ========================
     return hypers
 
@@ -32,7 +39,8 @@ def part1_generation_params():
     temperature = 0.0001
     # TODO: Tweak the parameters to generate a literary masterpiece.
     # ====== YOUR CODE: ======
-    
+    start_seq = "to be or not"
+    temperature = 5e-4
     # ========================
     return start_seq, temperature
 
@@ -77,7 +85,7 @@ def part2_vae_hyperparams():
     hypers["z_dim"] = 64
     hypers["x_sigma2"] = 0.1
     hypers["learn_rate"] = 0.0002
-    hypers["betas"] = #(a,b)
+    hypers["betas"] = (0.9,0.999)#(a,b) place holder
     # ========================
     return hypers
 

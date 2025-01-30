@@ -62,7 +62,7 @@ class Trainer(abc.ABC):
         """
         actual_num_epochs = 0
         train_loss, train_acc, test_loss, test_acc = [], [], [], []
-
+        best_test_loss = None
         best_acc = None
         epochs_without_improvement = 0
 
@@ -94,8 +94,33 @@ class Trainer(abc.ABC):
             #    simple regularization technique that is highly recommended.
             # ====== YOUR CODE: ======
             
-            raise NotImplementedError()
+            actual_num_epochs += 1
+            train_result = self.train_epoch(dl_train, verbose=verbose, **kw)
+            test_result = self.test_epoch(dl_test, verbose=verbose, **kw)
+            train_loss.extend(train_result.losses)
+            test_loss.extend(test_result.losses)
+            train_acc.append(train_result.accuracy)
+            test_acc.append(test_result.accuracy)
 
+            if best_acc is None or test_result.accuracy > best_acc:
+                best_acc = test_result.accuracy
+                save_checkpoint = True
+
+            # to allow working with tensors or not
+            if not isinstance(test_result.losses[0], torch.Tensor):
+                current_test_loss = sum(test_result.losses) / len(test_result.losses)
+            else:
+                current_test_loss = torch.mean(torch.stack(test_result.losses))
+
+
+            if (best_test_loss is None) or (current_test_loss < best_test_loss):
+                best_test_loss = current_test_loss
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+                
+            if (early_stopping is not None) and (early_stopping == epochs_without_improvement):
+                break
             # ========================
 
             # Save model checkpoint if requested
@@ -250,7 +275,22 @@ class RNNTrainer(Trainer):
         #  - Update params
         #  - Calculate number of correct char predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # Forward pass
+        y_pred, hidden_state = self.model(x, self.hidden_state)
+        self.hidden_state = hidden_state.detach()
+
+        # Backward pass
+        self.optimizer.zero_grad()
+        loss = sum(self.loss_fn(y_pred[:, i, :], y[:, i]) for i in range(seq_len))
+        loss.backward()
+
+        # update
+        self.optimizer.step()
+
+        # accuracy
+        y_pred = torch.argmax(y_pred, dim=-1)
+        num_correct = torch.sum(y_pred == y).float() #for division at the end to work
+
         # ========================
 
         # Note: scaling num_correct by seq_len because each sample has seq_len
@@ -270,7 +310,11 @@ class RNNTrainer(Trainer):
             #  - Loss calculation
             #  - Calculate number of correct predictions
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            y_pred, hidden_state = self.model(x, self.hidden_state)
+            loss = sum(self.loss_fn(y_pred[:, i,:], y[:, i]) for i in range(seq_len))# too many indecies? 
+            y_pred = torch.argmax(y_pred, dim=-1)
+            num_correct = torch.sum(y_pred == y).float()
+            self.hidden_state = hidden_state.detach()
             # ========================
 
         return BatchResult(loss.item(), num_correct.item() / seq_len)

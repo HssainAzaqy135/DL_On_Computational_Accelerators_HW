@@ -22,7 +22,14 @@ def part1_rnn_hyperparams():
     )
     # TODO: Set the hyperparameters to train the model.
     # ====== YOUR CODE: ======
-    
+    hypers['batch_size'] = 64
+    hypers['seq_len'] = 80 # all chars, start and end
+    hypers['h_dim'] = 100
+    hypers['n_layers'] = 3
+    hypers['dropout'] = 0.25
+    hypers['learn_rate'] = 2e-3
+    hypers['lr_sched_factor'] = 1e-1
+    hypers['lr_sched_patience'] = 4
     # ========================
     return hypers
 
@@ -32,7 +39,8 @@ def part1_generation_params():
     temperature = 0.0001
     # TODO: Tweak the parameters to generate a literary masterpiece.
     # ====== YOUR CODE: ======
-    
+    start_seq = "to be or not"
+    temperature = 5e-4
     # ========================
     return start_seq, temperature
 
@@ -72,7 +80,12 @@ def part2_vae_hyperparams():
     )
     # TODO: Tweak the hyperparameters to generate a former president.
     # ====== YOUR CODE: ======
-   
+    hypers["batch_size"] = 96
+    hypers["h_dim"] = 512
+    hypers["z_dim"] = 64
+    hypers["x_sigma2"] = 0.1
+    hypers["learn_rate"] = 0.0002
+    hypers["betas"] = (0.9,0.999)#(a,b) place holder
     # ========================
     return hypers
 
@@ -99,18 +112,44 @@ part2_q3 = r"""
 part2_q4 = r"""
 **Your answer:**
 
+"""
+
+# Part 3 answers
+def part3_gan_hyperparams():
+    hypers = dict(
+        batch_size=0, h_dim=0, z_dim=0, x_sigma2=0, learn_rate=0.0, betas=(0.0, 0.0),
+    )
+    # TODO: Tweak the hyperparameters to generate a former president.
+    # ====== YOUR CODE: ======
+
+    # ========================
+    return hypers
+
+part3_q1 = r"""
+**Your answer:**
+
 
 """
 
-# ==============
+part3_q2 = r"""
+**Your answer:**
 
-# ==============
-# Part 3 answers
+
+"""
+
+part3_q3 = r"""
+**Your answer:**
+
+
+
+"""
+
+
 
 PART3_CUSTOM_DATA_URL = None
 
 
-def part3_transformer_encoder_hyperparams():
+def part4_transformer_encoder_hyperparams():
     hypers = dict(
         embed_dim = 0, 
         num_heads = 0,
@@ -149,6 +188,25 @@ part4_q1 = r"""
 """
 
 part4_q2 = r"""
+**Your answer:**
+
+
+"""
+
+
+part4_q3= r"""
+**Your answer:**
+
+
+"""
+
+part4_q4 = r"""
+**Your answer:**
+
+
+"""
+
+part4_q5 = r"""
 **Your answer:**
 
 
