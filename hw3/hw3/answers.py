@@ -26,7 +26,7 @@ def part1_rnn_hyperparams():
     hypers['seq_len'] = 80 # all chars, start and end
     hypers['h_dim'] = 100
     hypers['n_layers'] = 3
-    hypers['dropout'] = 0.25
+    hypers['dropout'] = 0.2
     hypers['learn_rate'] = 2e-3
     hypers['lr_sched_factor'] = 1e-1
     hypers['lr_sched_patience'] = 4
@@ -39,8 +39,13 @@ def part1_generation_params():
     temperature = 0.0001
     # TODO: Tweak the parameters to generate a literary masterpiece.
     # ====== YOUR CODE: ======
-    start_seq = "to be or not"
-    temperature = 5e-4
+    start_seq = """TRAM. What would you have?
+  HELENA. Something; and scarce so much; nothing, indeed.
+    I would not tell you what I would, my lord.
+    Faith, yes:
+    Strangers and foes do sunder and not kiss.
+  BERTRAM. I pray you, stay not, but in haste to horse."""
+    temperature = 0.3
     # ========================
     return start_seq, temperature
 
