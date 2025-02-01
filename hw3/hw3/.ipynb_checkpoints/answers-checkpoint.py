@@ -100,12 +100,12 @@ def part2_vae_hyperparams():
     )
     # TODO: Tweak the hyperparameters to generate a former president.
     # ====== YOUR CODE: ======
-    hypers["batch_size"] = 96
-    hypers["h_dim"] = 512
-    hypers["z_dim"] = 64
-    hypers["x_sigma2"] = 0.1
+    hypers["batch_size"] = 10
+    hypers["h_dim"] = 1024
+    hypers["z_dim"] = 20
+    hypers["x_sigma2"] = 0.005
     hypers["learn_rate"] = 0.0002
-    hypers["betas"] = (0.9,0.999)#(a,b) place holder
+    hypers["betas"] = (0.9,0.99)#(a,b) place holder
     # ========================
     return hypers
 
@@ -113,12 +113,39 @@ def part2_vae_hyperparams():
 part2_q1 = r"""
 **Your answer:**
 
+The sigma2 hyperparameter controls how much the reconstructed output will deviate from the input. it also controls the similarity of the latent space probability distribution to the Normal distribution with mean of 0 and variance of 1.
+
+For low value of sigma2:
+
+The reconstruction error gets a strong penalty - the model will match the input closely.
+The model overfits and may ignore KL divergence as it will focus specifically to optimize the reconstruction term
+
+For high value of sigma2:
+
+The reconstruction loss gets scaled down - matching the input precisely is now less important.
+optimazing KL divergence is more important. We will get blurry reconstructions as the latent space will be more generalized at the cost of low quality reconstructions.
+
 
 """
 
 part2_q2 = r"""
 **Your answer:**
+Q2.1
+The purpose of both parts of the VAE loss term - reconstruction loss and KL divergence loss:
 
+Reconstruction loss - defined as the mse between the input image and recomstructed image and scaled by sigma 2. The purpose is to define a loss function that measures the resembelncy between the output image and the input image scaled by a factor of "randomness" that gives us room for getting unique images
+
+KL divergence loss - its purpuse is to match the learned latent space to a normal distribution, making it smooth and continues. This produces a combination of the original images with the latent space and prevents overfitting by balancing between generelezation and exact reconstruction.
+
+2.
+
+The KL loss term shapes the latent space distribution by making it close to a standard normal distribution
+
+3.
+
+As we said above:
+
+It makes the results morer smooth and continious, It prevents overfitting to the learned input, it makes the model generalize better. 
 
 """
 

@@ -19,7 +19,37 @@ class EncoderCNN(nn.Module):
         #  use pooling or only strides, use any activation functions,
         #  use BN or Dropout, etc.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        
+        # 1st Convolutional Block
+        modules.append(nn.Conv2d(in_channels, 64, kernel_size=5, stride=1, padding=2))  # Larger kernel size
+        modules.append(nn.BatchNorm2d(64))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))  # LeakyReLU 
+        modules.append(nn.MaxPool2d(2))
+        # 2nd Convolutional Block
+        modules.append(nn.Conv2d(64, 128, kernel_size=5, stride=1, padding=2))
+        modules.append(nn.BatchNorm2d(128))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))
+        modules.append(nn.MaxPool2d(2))
+        # 3rd Convolutional Block
+        modules.append(nn.Conv2d(128, 256, kernel_size=5, stride=1, padding=2))
+        modules.append(nn.BatchNorm2d(256))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))
+        modules.append(nn.MaxPool2d(2))    
+        # 4th Convolutional Block
+        modules.append(nn.Conv2d(256, 512, kernel_size=5, stride=1, padding=2))
+        modules.append(nn.BatchNorm2d(512))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))
+        modules.append(nn.MaxPool2d(2))
+        # 5th Convolutional Block
+        modules.append(nn.Conv2d(512, out_channels, kernel_size=5, stride=1, padding=2))
+        modules.append(nn.BatchNorm2d(out_channels))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))
+        modules.append(nn.MaxPool2d(2))
+        
+        #Dropout layer
+        modules.append(nn.Dropout(p=0.3))  # Dropout for regularization
+        
+        
         # ========================
         self.cnn = nn.Sequential(*modules)
 
@@ -42,7 +72,26 @@ class DecoderCNN(nn.Module):
         #  output should be a batch of images, with same dimensions as the
         #  inputs to the Encoder were.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+    
+        # 1st Transposed Convolution Block (reverse of 5th Convolution Block)
+        modules.append(nn.ConvTranspose2d(in_channels, 512, 4,stride=2, padding=1, output_padding=0))
+        modules.append(nn.BatchNorm2d(512))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))
+        # 2nd Transposed Convolution Block (reverse of 4th Convolution Block)
+        modules.append(nn.ConvTranspose2d(512, 256, 4,stride=2, padding=1, output_padding=0))
+        modules.append(nn.BatchNorm2d(256))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))
+        # 3rd Transposed Convolution Block (reverse of 3rd Convolution Block)
+        modules.append(nn.ConvTranspose2d(256, 128, 4,stride=2, padding=1, output_padding=0))
+        modules.append(nn.BatchNorm2d(128))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))
+        # 4th Transposed Convolution Block (reverse of 2nd Convolution Block)
+        modules.append(nn.ConvTranspose2d(128, 64, 4,stride=2, padding=1, output_padding=0))
+        modules.append(nn.BatchNorm2d(64))
+        modules.append(nn.LeakyReLU(0.01, inplace=True))
+        # 5th Transposed Convolution Block (reverse of 1st Convolution Block)
+        modules.append(nn.ConvTranspose2d(64, out_channels, 4,stride=2, padding=1, output_padding=0))
+        
         # ========================
         self.cnn = nn.Sequential(*modules)
 
@@ -70,7 +119,10 @@ class VAE(nn.Module):
 
         # TODO: Add more layers as needed for encode() and decode().
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.mu = nn.Linear(in_features=n_features, out_features=z_dim)    
+        self.sigma = nn.Linear(in_features=n_features, out_features=z_dim) 
+
+        self.decode_MLP = nn.Linear(z_dim, n_features) 
         # ========================
 
     def _check_features(self, in_size):
@@ -91,7 +143,14 @@ class VAE(nn.Module):
         #     log_sigma2 (mean and log variance) of q(Z|x).
         #  2. Apply the reparametrization trick to obtain z.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        encoded_features  = self.features_encoder(x) 
+        
+        encoded_features_flat = torch.flatten(encoded_features, start_dim=1)
+ 
+        mu = self.mu(encoded_features_flat)                   
+        log_sigma2 = self.sigma(encoded_features_flat)
+        z = log_sigma2*torch.randn(log_sigma2.shape).to(encoded_features.device) + mu
+
         # ========================
 
         return z, mu, log_sigma2
@@ -102,7 +161,15 @@ class VAE(nn.Module):
         #  1. Convert latent z to features h with a linear layer.
         #  2. Apply features decoder.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # Get the feature map dimensions from the encoder (channels, height, width)
+        latent_channels, H, W = self.features_shape
+    
+        # Pass latent vector z through the decoder MLP to get the latent features
+        latent_features = self.decode_MLP(z).reshape(-1, latent_channels, H, W)
+    
+        # Pass the latent features through the feature decoder to reconstruct the input
+        x_rec = self.features_decoder(latent_features)
+    
         # ========================
 
         # Scale to [-1, 1] (same dynamic range as original images).
@@ -121,7 +188,8 @@ class VAE(nn.Module):
             #    Instead of sampling from N(psi(z), sigma2 I), we'll just take
             #    the mean, i.e. psi(z).
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            z = torch.randn(n, self.z_dim).to(device)
+            samples = self.decode(z).cpu()
             # ========================
 
         # Detach and move to CPU for display purposes
@@ -154,7 +222,22 @@ def vae_loss(x, xr, z_mu, z_log_sigma2, x_sigma2):
     #  1. The covariance matrix of the posterior is diagonal.
     #  2. You need to average over the batch dimension.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    data_loss = torch.mean((x - xr) ** 2) / x_sigma2  # Squared error scaled by x_sigma2
+
+    # KL Divergence Loss
+    latent_dim = z_mu.shape[-1]  # Dimensionality of the latent space
+    mean_squared = torch.sum(z_mu ** 2, dim=-1)  # L2 norm of the mean vector (N,)
+    latent_variance = torch.exp(z_log_sigma2)  # Variance from log variance (N, z_dim)
+    variance_sum = torch.sum(latent_variance, dim=-1)  # Sum of variances (N,)
+    log_variance_sum = torch.sum(z_log_sigma2, dim=-1)  # Sum of log-variances (N,)
+
+    # KL Divergence term
+    kldiv_loss = torch.mean(variance_sum + mean_squared - latent_dim - log_variance_sum)
+
+    # Total VAE loss (data loss + KL divergence)
+    loss = data_loss + kldiv_loss
+
+
     # ========================
 
     return loss, data_loss, kldiv_loss
