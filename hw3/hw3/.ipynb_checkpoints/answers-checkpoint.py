@@ -130,34 +130,46 @@ optimazing KL divergence is more important. We will get blurry reconstructions a
 
 part2_q2 = r"""
 **Your answer:**
-Q2.1
+
+---------- Q2.1 ----------
+
 The purpose of both parts of the VAE loss term - reconstruction loss and KL divergence loss:
 
 Reconstruction loss - defined as the mse between the input image and recomstructed image and scaled by sigma 2. The purpose is to define a loss function that measures the resembelncy between the output image and the input image scaled by a factor of "randomness" that gives us room for getting unique images
 
 KL divergence loss - its purpuse is to match the learned latent space to a normal distribution, making it smooth and continues. This produces a combination of the original images with the latent space and prevents overfitting by balancing between generelezation and exact reconstruction.
 
-2.
+---------- Q2.2 ----------
 
-The KL loss term shapes the latent space distribution by making it close to a standard normal distribution
+The KL loss term shapes the latent space distribution by making it close to a standard normal distribution, in other words normal with mean 0 and standard deviation 1.
 
-3.
+---------- Q2.3 ----------
 
 As we said above:
 
-It makes the results morer smooth and continious, It prevents overfitting to the learned input, it makes the model generalize better. 
+It makes the results smoother and more continious, It prevents overfitting to the learned inputs which makes the model generalize better. 
 
 """
 
 part2_q3 = r"""
 **Your answer:**
 
+Generally, we don't know what is the evidence distribution p(X), it is extremely complex and  not computationally feasible. Yet, our goal is to learn an estimate of p(X) in order to generate other data points.
+We do so by maximizing a lower bound for log(p(X)) and we aim to get it as tight as possible so that we get an estimation of p(X) that is accurate using said bound.
 
 
 """
 
 part2_q4 = r"""
 **Your answer:**
+
+We model the log-variance of the latent space rather than modeling the variance itself for teh following reasons:
+
+1. numerical stability: variance must be strictly positive, but  general neural networks can output any number. If we directly model the variance itself, ensuring positive values requires extra constraints , which can be numerically unstable due to scale or computation method. 
+Instead, we let the network predict log-variance, which can take any real value from minus infinity to infinity, and then compute the variance by taking an exponent. This ensures positivity due to exponents being positive.
+
+2. more stable KL divergence computation: in a VAE we use the KL divergence which contains a term log(var^2) which is directly available if we model the log-variance, simplifying calculations and preventing numerical instabilities due to the approximation of logarithmic functions.
+
 
 """
 
