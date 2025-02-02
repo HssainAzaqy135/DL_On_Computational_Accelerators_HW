@@ -205,7 +205,7 @@ part3_q3 = r"""
 
 
 
-PART3_CUSTOM_DATA_URL = None
+PART3_CUSTOM_DATA_URL = "https://github.com/AviaAvraham1/TempDatasets/raw/refs/heads/main/George_W_Bush2.zip"
 
 
 def part4_transformer_encoder_hyperparams():
