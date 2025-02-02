@@ -20,7 +20,20 @@ class Discriminator(nn.Module):
         #  You can then use either an affine layer or another conv layer to
         #  flatten the features.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        in_channels = in_size[0]
+        dims = [in_channels, 64, 128, 256]
+        modules = []
+        for i in range(len(dims)-1):
+            modules.append(nn.Conv2d(in_channels=dims[i],
+                                     out_channels=dims[i+1],
+                                     kernel_size=(5, 5),
+                                     stride=(2, 2),
+                                     padding=(2, 2)))
+            modules.append(nn.BatchNorm2d(num_features=dims[i+1], momentum=0.9))
+            modules.append(nn.ReLU())
+
+        self.cnn = nn.Sequential(*modules)
+        self.fully_connected_layer = nn.Linear(self._calc_num_cnn_features(in_size), 1, bias=True)
         # ========================
 
     def _calc_num_cnn_features(self, in_shape):
@@ -39,7 +52,9 @@ class Discriminator(nn.Module):
         #  No need to apply sigmoid to obtain probability - we'll combine it
         #  with the loss due to improved numerical stability.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        mapped_features = self.cnn(x)
+        mapped_features = mapped_features.view(x.shape[0], -1)
+        y = self.fully_connected_layer(mapped_features)
         # ========================
         return y
 
