@@ -30,7 +30,7 @@ class Discriminator(nn.Module):
                                      stride=(2, 2),
                                      padding=(2, 2)))
             modules.append(nn.BatchNorm2d(num_features=dims[i+1], momentum=0.9))
-            modules.append(nn.ReLU())
+            modules.append(nn.LeakyReLU(negative_slope=0.01))
 
         self.cnn = nn.Sequential(*modules)
         self.fully_connected_layer = nn.Linear(self._calc_num_cnn_features(in_size), 1, bias=True)
@@ -76,7 +76,42 @@ class Generator(nn.Module):
         #  section or implement something new.
         #  You can assume a fixed image size.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        #image is 64x64
+        self.feature_map_size = featuremap_size
+        self.out_channels = out_channels
+        
+        # Fully connected layer to project latent vector into feature maps
+        self.in_channels = 1024
+        self.fc = nn.Linear(z_dim, featuremap_size * featuremap_size * self.in_channels, bias=False) #bias is False since right after we haev batch norm
+
+        # upsampling layers (ConvTranspose2d)
+        channels = [512, 256, 128, 64, out_channels]
+        modules = []
+
+        # First transposed conv layer (does not upsample, just changes channels)
+        modules.append(nn.ConvTranspose2d(
+            in_channels=self.in_channels,
+            out_channels=channels[0],
+            kernel_size=5,
+            padding=2
+        ))
+
+        # Upsampling layers (4 layers, each doubling spatial dimensions)
+        for i in range(len(channels) - 1):
+            modules.append(nn.BatchNorm2d(num_features=channels[i], eps=1e-6, momentum=0.9))
+            modules.append(nn.LeakyReLU(negative_slope=0.01))
+            modules.append(nn.ConvTranspose2d(
+                in_channels=channels[i],
+                out_channels=channels[i + 1],
+                kernel_size=5,
+                stride=2,  # Doubles spatial size
+                padding=2,
+                output_padding=1
+            ))
+
+        # Assemble generator
+        self.generator = nn.Sequential(*modules)
+        
         # ========================
 
     def sample(self, n, with_grad=False):
@@ -93,7 +128,14 @@ class Generator(nn.Module):
         #  Generate n latent space samples and return their reconstructions.
         #  Don't use a loop.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        latent_space_samples = torch.randn(size=(n, self.z_dim), device=device)
+        if not with_grad:
+            with torch.no_grad():
+                samples = self.forward(latent_space_samples)
+            # print(samples.shape)
+        else:
+            samples = self.forward(latent_space_samples)
+            # print(samples.shape)
         # ========================
         return samples
 
@@ -107,7 +149,9 @@ class Generator(nn.Module):
         #  Don't forget to make sure the output instances have the same
         #  dynamic range as the original (real) images.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        x = self.fc(z)
+        x = torch.reshape(x, [z.shape[0], self.in_channels, self.feature_map_size, self.feature_map_size])
+        x = self.generator(x)  # Pass through transposed conv layers
         # ========================
         return x
 
@@ -133,7 +177,14 @@ def discriminator_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     #  generated labels.
     #  See pytorch's BCEWithLogitsLoss for a numerically stable implementation.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    device = y_data.device
+    noise_for_y_data = torch.rand(y_data.shape,device=device) * label_noise - label_noise / 2
+    noise_for_y_generated = torch.rand(y_generated.shape, device=device) * label_noise - label_noise / 2
+    data_labels_with_noise = data_label + noise_for_y_data
+    generated_labels = (1-data_label)+noise_for_y_generated
+    criterion = torch.nn.BCEWithLogitsLoss()
+    loss_data = criterion(y_data, data_labels_with_noise)
+    loss_generated = criterion(y_generated, generated_labels)
     # ========================
     return loss_data + loss_generated
 
@@ -154,7 +205,10 @@ def generator_loss_fn(y_generated, data_label=0):
     #  Think about what you need to compare the input to, in order to
     #  formulate the loss in terms of Binary Cross Entropy.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    device = y_generated.device
+    criterion = torch.nn.BCEWithLogitsLoss()
+    target_pred = torch.full(y_generated.shape, float(data_label),device=device)
+    loss = criterion(y_generated, target_pred)
     # ========================
     return loss
 
