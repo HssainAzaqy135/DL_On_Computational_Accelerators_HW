@@ -21,7 +21,7 @@ class Discriminator(nn.Module):
         #  flatten the features.
         # ====== YOUR CODE: ======
         in_channels = in_size[0]
-        dims = [in_channels, 64, 128, 256]
+        dims = [in_channels, 64, 128,256]
         modules = []
         for i in range(len(dims)-1):
             modules.append(nn.Conv2d(in_channels=dims[i],
@@ -179,12 +179,11 @@ def discriminator_loss_fn(y_data, y_generated, data_label=0, label_noise=0.0):
     # ====== YOUR CODE: ======
     device = y_data.device
     noise_for_y_data = torch.rand(y_data.shape,device=device) * label_noise - label_noise / 2
-    noise_for_y_generated = torch.rand(y_generated.shape, device=device) * label_noise - label_noise / 2
     data_labels_with_noise = data_label + noise_for_y_data
+    noise_for_y_generated = torch.rand(y_generated.shape, device=device) * label_noise - label_noise / 2
     generated_labels = (1-data_label)+noise_for_y_generated
-    criterion = torch.nn.BCEWithLogitsLoss()
-    loss_data = criterion(y_data, data_labels_with_noise)
-    loss_generated = criterion(y_generated, generated_labels)
+    loss_data = torch.nn.BCEWithLogitsLoss()(y_data, data_labels_with_noise)
+    loss_generated = torch.nn.BCEWithLogitsLoss()(y_generated, generated_labels)
     # ========================
     return loss_data + loss_generated
 
