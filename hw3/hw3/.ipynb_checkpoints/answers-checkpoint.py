@@ -180,7 +180,22 @@ def part3_gan_hyperparams():
     )
     # TODO: Tweak the hyperparameters to generate a former president.
     # ====== YOUR CODE: ======
+    hypers = dict(
+        batch_size=8,
+        z_dim=1024,
+        data_label=1,
+        label_noise = 0.2,
+        learn_rate=0.0002,# not used really
+        discriminator_optimizer=dict(
+            type="Adam",
+            lr=0.0002,
 
+        ),
+        generator_optimizer=dict(
+            type="Adam",
+            lr=0.0002,
+        )
+    )
     # ========================
     return hypers
 

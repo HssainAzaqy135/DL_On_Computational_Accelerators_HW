@@ -82,7 +82,7 @@ class Generator(nn.Module):
         
         # Fully connected layer to project latent vector into feature maps
         self.in_channels = 1024
-        self.fc = nn.Linear(z_dim, featuremap_size * featuremap_size * self.in_channels, bias=False) #bias is False since right after we haev batch norm
+        self.fc = nn.Linear(z_dim, featuremap_size * featuremap_size * self.in_channels, bias=False) #bias is False since right after we have batch norm
 
         # upsampling layers (ConvTranspose2d)
         channels = [512, 256, 128, 64, out_channels]
@@ -96,7 +96,7 @@ class Generator(nn.Module):
             padding=2
         ))
 
-        # Upsampling layers (4 layers, each doubling spatial dimensions)
+        # upsampling layers are 4 layers, each doubling spatial dims up to 64
         for i in range(len(channels) - 1):
             modules.append(nn.BatchNorm2d(num_features=channels[i], eps=1e-6, momentum=0.9))
             modules.append(nn.LeakyReLU(negative_slope=0.01))
@@ -104,7 +104,7 @@ class Generator(nn.Module):
                 in_channels=channels[i],
                 out_channels=channels[i + 1],
                 kernel_size=5,
-                stride=2,  # Doubles spatial size
+                stride=2,  # doubles spatial size
                 padding=2,
                 output_padding=1
             ))
@@ -132,7 +132,7 @@ class Generator(nn.Module):
         if not with_grad:
             with torch.no_grad():
                 samples = self.forward(latent_space_samples)
-            # print(samples.shape)
+                # print(samples.shape)
         else:
             samples = self.forward(latent_space_samples)
             # print(samples.shape)
@@ -151,7 +151,7 @@ class Generator(nn.Module):
         # ====== YOUR CODE: ======
         x = self.fc(z)
         x = torch.reshape(x, [z.shape[0], self.in_channels, self.feature_map_size, self.feature_map_size])
-        x = self.generator(x)  # Pass through transposed conv layers
+        x = self.generator(x)
         # ========================
         return x
 
@@ -233,7 +233,13 @@ def train_batch(
     #  2. Calculate discriminator loss
     #  3. Update discriminator parameters
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    dsc_optimizer.zero_grad()
+    data_generated = gen_model.sample(x_data.shape[0], with_grad=False) # no grad
+    data_generated_score = dsc_model(data_generated)
+    y_data_score = dsc_model(x_data)
+    dsc_loss = dsc_loss_fn(y_data_score, data_generated_score)
+    dsc_loss.backward()
+    dsc_optimizer.step()
     # ========================
 
     # TODO: Generator update
@@ -241,7 +247,12 @@ def train_batch(
     #  2. Calculate generator loss
     #  3. Update generator parameters
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    gen_optimizer.zero_grad()
+    gen_sample = gen_model.sample(x_data.shape[0], with_grad=True)
+    data_dsc = dsc_model(gen_sample)
+    gen_loss = gen_loss_fn(data_dsc)
+    gen_loss.backward()
+    gen_optimizer.step()
     # ========================
 
     return dsc_loss.item(), gen_loss.item()
@@ -264,7 +275,7 @@ def save_checkpoint(gen_model, dsc_losses, gen_losses, checkpoint_file):
     #  You should decide what logic to use for deciding when to save.
     #  If you save, set saved to True.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # save after each epoch
     # ========================
     torch.save(gen_model, checkpoint_file)
     print(f"*** Saved checkpoint {checkpoint_file} ")
