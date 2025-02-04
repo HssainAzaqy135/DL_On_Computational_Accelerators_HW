@@ -182,7 +182,7 @@ def part3_gan_hyperparams():
     # ====== YOUR CODE: ======
     hypers = dict(
         batch_size=8,
-        z_dim=1024,
+        z_dim=100,
         data_label=1,
         label_noise = 0.2,
         learn_rate=0.0002,# not used really
