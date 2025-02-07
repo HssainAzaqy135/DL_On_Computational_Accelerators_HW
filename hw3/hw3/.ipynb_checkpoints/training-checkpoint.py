@@ -410,13 +410,13 @@ class FineTuningTrainer(Trainer):
         # TODO:
         #  fill out the training loop.
         # ====== YOUR CODE: ======
-        self.loss_fn = CrossEntropyLoss()
+        # self.loss_fn = CrossEntropyLoss()
         
         # Forward 
-        outputs = self.model(input_ids=input_ids, attention_mask=attention_masks)
+        outputs = self.model(input_ids=input_ids, attention_mask=attention_masks,labels = labels)
         logits = outputs.logits
         
-        loss = self.loss_fn(logits, labels)
+        loss = outputs.loss
 
         # Backward 
         self.optimizer.zero_grad()
@@ -441,13 +441,13 @@ class FineTuningTrainer(Trainer):
             # TODO:
             #  fill out the training loop.
             # ====== YOUR CODE: ======
-            self.loss_fn = CrossEntropyLoss()
+            # self.loss_fn = CrossEntropyLoss()
             # Forward
-            outputs = self.model(input_ids=input_ids, attention_mask=attention_masks)
+            outputs = self.model(input_ids=input_ids, attention_mask=attention_masks,labels = labels)
             logits = outputs.logits
 
             # loss
-            loss = self.loss_fn(logits, labels)
+            loss = outputs.loss
 
             # Compute accuracy
             predictions = torch.argmax(logits, dim=1)
