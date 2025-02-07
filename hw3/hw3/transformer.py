@@ -37,7 +37,47 @@ def sliding_window_attention(q, k, v, window_size, padding_mask=None):
     ## Think how you can obtain the indices corresponding to the entries in the sliding windows using tensor operations (without loops),
     ## and then use these indices to compute the dot products directly.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    if len(q.shape) == 3:
+        q = q.unsqueeze(1)
+        k = k.unsqueeze(1)
+        v = v.unsqueeze(1)
+    
+    batch_size, num_heads, seq_len, embed_dim = q.shape
+    half_window = window_size // 2
+    
+    # Create appropriate indices
+    row_indices = torch.arange(seq_len, dtype=torch.long, device=q.device)
+    window_indices = torch.arange(-half_window, half_window, dtype=torch.long, device=q.device)
+    col_indices = row_indices.unsqueeze(1) + window_indices.unsqueeze(0)
+    col_indices = torch.clamp(col_indices, 0, seq_len - 1)
+    
+    # Reshape q for batch matmul: [batch, heads, seq_len, 1, embed_dim]
+    q_expanded = q.unsqueeze(-2)
+    
+    # Select and reshape k: [batch, heads, seq_len, window_size, embed_dim]
+    k_selected = k.index_select(-2, col_indices.view(-1))
+    k_window = k_selected.view(batch_size, num_heads, seq_len, window_size, embed_dim)
+    
+    # Compute scores: [batch, heads, seq_len, 1, window_size]
+    scores = torch.matmul(q_expanded, k_window.transpose(-2, -1)) / (embed_dim ** 0.5)
+    scores = scores.squeeze(-2)
+    
+    if padding_mask is not None:
+        mask = padding_mask.unsqueeze(1).unsqueeze(2).expand(-1, num_heads, seq_len, window_size)
+        scores = scores.masked_fill(~mask, float('-inf'))
+    
+    # Compute attention weights
+    attention = torch.nn.functional.softmax(scores, dim=-1)
+    
+    # Apply attention to values
+    v_selected = v.index_select(-2, col_indices.view(-1))
+    v_window = v_selected.view(batch_size, num_heads, seq_len, window_size, embed_dim)
+    values = torch.matmul(attention.unsqueeze(-2), v_window).squeeze(-2)
+    
+    # Remove head dimension for single-head case
+    if len(q.shape) == 3:
+        values = values.squeeze(1)
+        attention = attention.squeeze(1)
     # ========================
 
 

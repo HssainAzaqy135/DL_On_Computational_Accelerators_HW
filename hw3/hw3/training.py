@@ -9,6 +9,8 @@ from torch.utils.data import DataLoader
 
 from cs236781.train_results import FitResult, BatchResult, EpochResult
 
+from torch.nn import CrossEntropyLoss
+
 
 class Trainer(abc.ABC):
     """
@@ -408,8 +410,22 @@ class FineTuningTrainer(Trainer):
         # TODO:
         #  fill out the training loop.
         # ====== YOUR CODE: ======
+        self.loss_fn = CrossEntropyLoss()
+        
+        # Forward 
+        outputs = self.model(input_ids=input_ids, attention_mask=attention_masks)
+        logits = outputs.logits
+        
+        loss = self.loss_fn(logits, labels)
 
-        raise NotImplementedError()
+        # Backward 
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        #  accuracy
+        predictions = torch.argmax(logits, dim=1)
+        num_correct = (predictions == labels).sum().item()
         
         # ========================
         
@@ -425,6 +441,16 @@ class FineTuningTrainer(Trainer):
             # TODO:
             #  fill out the training loop.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            self.loss_fn = CrossEntropyLoss()
+            # Forward
+            outputs = self.model(input_ids=input_ids, attention_mask=attention_masks)
+            logits = outputs.logits
+
+            # loss
+            loss = self.loss_fn(logits, labels)
+
+            # Compute accuracy
+            predictions = torch.argmax(logits, dim=1)
+            num_correct = (predictions == labels).sum().item()
             # ========================
         return BatchResult(loss, num_correct)
