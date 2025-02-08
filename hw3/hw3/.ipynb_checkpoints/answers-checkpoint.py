@@ -202,11 +202,23 @@ def part3_gan_hyperparams():
 part3_q1 = r"""
 **Your answer:**
 
+Training the GAN model is done by optimizing the losses of the discriminator and generator, seperately for each batch.
+
+Discriminator training:
+First sample a datapoint using the generator and check what is the discriminator's classification and update the discriminator based on the its loss. In this part we do not maintain the gradients we pass to the "sample" function with_grad=False since we don't need to update the generator's weights because of this sampling.  
+
+The generator is trained by generating a datapoint and then showing it to the discriminator and updating the generator based on the its loss.this time we do maintain the gradients (we pass to the "sample" function with_grad=True) since we do want the generator's weights to be updated during backpropagation. 
 
 """
 
 part3_q2 = r"""
 **Your answer:**
+
+1. No, we shouldn't decide to stop training solely based on the fact the generator loss is below some threshold. Our training goal for the generator is that the discriminator becomes as good as flipping a coin when trying to decide if the inputs from the generator are real or not.
+This goal lets the generator aim towards beating an "evolving" dicriminator with time.
+
+2. If the discriminator loss remains at a constant value while the generator loss decreases, this may imply that the generator started overfitting the datapoints. Or even worse, the entire model is failing to converge. Since this means the generator is able to fool the discriminator more ofter as we train but the discriminator is not getting better at identifying generated data. And since both the discriminator's and generator's training depend on one another, this means the discriminator is not improving and is just stuck.
+We saw this kind of behaviour with Moshe in the tutorial.
 
 
 """
@@ -214,7 +226,9 @@ part3_q2 = r"""
 part3_q3 = r"""
 **Your answer:**
 
-
+Given the VAE and GAN results we can see that the VAE results are blurry with not as sharp edges while the GAN results are more detailed.
+We think this is the expected result since the VAE loss has a reconstruction loss, forcing the output to be close to the input in terms of mean squered error loss which results in smooth edges.
+On the other hand in GAN, the generator does not have access to real images while training but learns how those should look through what the discriminator decides. This makes sure the generators predictions to be more realistic since otherwise the discriminator would have an easy time detecting generated images.
 
 """
 
