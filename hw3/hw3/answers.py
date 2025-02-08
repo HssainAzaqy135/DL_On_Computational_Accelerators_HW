@@ -243,21 +243,8 @@ def part4_transformer_encoder_hyperparams():
 
 
 
-part3_q1 = r"""
-**Your answer:**
-
-"""
-
-part3_q2 = r"""
-**Your answer:**
-
-
-"""
-
-
 part4_q1 = r"""
 **Your answer:**
-
 
 """
 
@@ -268,23 +255,23 @@ part4_q2 = r"""
 """
 
 
-part4_q3= r"""
+part5_q1 = r"""
 **Your answer:**
 
 
 """
 
-part4_q4 = r"""
+part5_q2 = r"""
 **Your answer:**
 
 
 """
 
-part4_q5 = r"""
+
+part5_q3= r"""
 **Your answer:**
 
 
 """
-
 
 # ==============
