@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import math
 
 
@@ -37,49 +38,63 @@ def sliding_window_attention(q, k, v, window_size, padding_mask=None):
     ## Think how you can obtain the indices corresponding to the entries in the sliding windows using tensor operations (without loops),
     ## and then use these indices to compute the dot products directly.
     # ====== YOUR CODE: ======
-    num_heads = q.shape[1] if len(q.shape) == 4 else 1  # Handle both single and multi-head cases
+    assert window_size % 2 == 0, "Window size must be an even number"
     half_window = window_size // 2
+    device = q.device
+    
+    if(q.dim() == 4):
+        num_heads = q.shape[1]  
+    else: 
+        num_heads = 1
+    
 
-    # Create sliding window indices
-    base_indices = torch.arange(seq_len, device=q.device).unsqueeze(1) + torch.arange(-half_window, half_window, device=q.device).unsqueeze(0)
-    base_indices = torch.clamp(base_indices, 0, seq_len - 1)  # Shape: [seq_len, window_size]
+    k, v = k.to(device), v.to(device)
 
-    # Expand indices for batch and heads
+    # Pad tensor along sequence length dimension
+    padded_k = F.pad(k, pad=(0, 0, half_window, half_window), value=0)
+
+    # Generate sliding window indices
+    seq_indices = torch.arange(padded_k.shape[-2], device=device)
+    window_indices = seq_indices.unfold(0, window_size + 1, 1)
+
     if num_heads > 1:
-        indices = base_indices.unsqueeze(0).unsqueeze(0).expand(batch_size, num_heads, -1, -1)  # Shape: [batch, num_heads, seq_len, window_size]
+        gather_indices = window_indices[None, None, ..., None].expand(batch_size, num_heads, -1, -1, embed_dim)
+        expanded_k = padded_k.unsqueeze(2).expand(-1, -1, seq_len, -1, -1)
     else:
-        indices = base_indices.unsqueeze(0).expand(batch_size, -1, -1)  # Shape: [batch, seq_len, window_size]
+        gather_indices = window_indices[None, ..., None].expand(batch_size, -1, -1, embed_dim)
+        expanded_k = padded_k.unsqueeze(1).expand(-1, seq_len, -1, -1)
 
-    # Gather `k` and `v` using correct shape
-    if num_heads > 1:
-        k_window = torch.gather(k, 2, indices.unsqueeze(-1).expand(-1, -1, -1, -1, embed_dim))  # Shape: [batch, num_heads, seq_len, window_size, embed_dim]
-        v_window = torch.gather(v, 2, indices.unsqueeze(-1).expand(-1, -1, -1, -1, embed_dim))
-    else:
-        indices = indices.unsqueeze(-1).expand(-1, -1, -1, embed_dim)  # Fix shape issue
-        k_window = torch.gather(k, 1, indices)  # Shape: [batch, seq_len, window_size, embed_dim]
-        v_window = torch.gather(v, 1, indices)
-
+    # Gather keys for attention computation
+    k_windows = torch.gather(expanded_k, -2, gather_indices)
+    
     # Compute attention scores
-    scale_factor = embed_dim ** 0.5
+    attn_scores = (q.unsqueeze(-2) @ k_windows.transpose(-1, -2)).squeeze(-2) / math.sqrt(embed_dim)
+    
+    # Compute window-based offsets
+    window_offsets = torch.arange(-half_window, half_window + 1, device=device).unsqueeze(0)
+    index_offsets = (torch.arange(seq_len, device=device).unsqueeze(1) + window_offsets).clamp(0, seq_len - 1)
+    
+
+    
     if num_heads > 1:
-        attn_scores = torch.einsum("bhqd,bqwd->bhqw", q, k_window) / scale_factor
+        index_offsets = index_offsets.unsqueeze(0).unsqueeze(0).expand(batch_size, num_heads, -1, -1)
+        full_attn_scores = torch.zeros((batch_size, num_heads, seq_len, seq_len), device=device).scatter_add_(3, index_offsets, attn_scores)
+        
     else:
-        attn_scores = torch.einsum("bqd,bqwd->bqw", q, k_window) / scale_factor
+        index_offsets = index_offsets.unsqueeze(0).expand(batch_size, -1, -1)
+        full_attn_scores = torch.zeros((batch_size, seq_len, seq_len), device=device).scatter_add_(2, index_offsets, attn_scores)
+        
+    neg_inf = torch.tensor(float('-inf'), dtype=full_attn_scores.dtype, device=device)
+    full_attn_scores = torch.where(full_attn_scores == 0.0, neg_inf, full_attn_scores)
 
-    # Apply padding mask if provided
-    if padding_mask is not None:
-        padding_mask = padding_mask.unsqueeze(-1).expand(-1, -1, window_size)
-        attn_scores = attn_scores.masked_fill(padding_mask.unsqueeze(1) if num_heads > 1 else padding_mask, -1e9)
 
-    # Softmax over window dimension
-    attention_weights = torch.softmax(attn_scores, dim=-1)
+    attention = F.softmax(full_attn_scores, dim=-1)
+    attention = attention.masked_fill(torch.isnan(attention), 0.0)
+    values = torch.matmul(attention, v)
 
-    # Compute weighted sum of values
-    if num_heads > 1:
-        values = torch.einsum("bhqw,bqwd->bhqd", attention_weights, v_window)
-    else:
-        values = torch.einsum("bqw,bqwd->bqd", attention_weights, v_window)
+
     # ========================
+
 
     return values, attention
 
