@@ -372,7 +372,17 @@ class TransformerEncoderTrainer(Trainer):
         # TODO:
         #  fill out the training loop.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.optimizer.zero_grad()
+        # Forward pass
+        logits = self.model(input_ids, attention_mask).squeeze(-1)
+        # Compute loss
+        loss = self.loss_fn(logits, label)
+        # Backward pass and optimization step
+        loss.backward()
+        self.optimizer.step()
+        # Compute predictions and accuracy
+        predictions = torch.round(torch.sigmoid(logits))
+        num_correct = (predictions == label).sum()
         # ========================
         
         
@@ -391,10 +401,15 @@ class TransformerEncoderTrainer(Trainer):
             # TODO:
             #  fill out the testing loop.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            # Forward pass
+            logits = self.model(input_ids, attention_mask).squeeze(-1)
+            # Compute predictions and accuracy
+            predictions = torch.round(torch.sigmoid(logits))
+            num_correct = (predictions == label).sum()
+            # Compute loss
+            loss = self.loss_fn(logits, label)
             # ========================
 
-            
         
         return BatchResult(loss.item(), num_correct.item())
 

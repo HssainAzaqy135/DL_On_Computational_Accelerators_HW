@@ -250,7 +250,15 @@ def part4_transformer_encoder_hyperparams():
 
     # TODO: Tweak the hyperparameters to train the transformer encoder.
     # ====== YOUR CODE: ======
-    
+    hypers = dict(
+        embed_dim = 128, 
+        num_heads = 8,
+        num_layers = 3,
+        hidden_dim = 100,
+        window_size = 16,
+        droupout = 0.1,
+        lr=0.0002,
+    )
     # ========================
     return hypers
 
@@ -260,11 +268,22 @@ def part4_transformer_encoder_hyperparams():
 part4_q1 = r"""
 **Your answer:**
 
+Stacking multiple encoder layers taht have sliding-window attention results in a broader context in the final layer since each additional layer allows information to "persist" beyond the local window. This effect is similar to how stacking convolutional layers in a CNN's effectively increases the receptive field.
+
+How It Works:
+In the first Encoder Layer each token attends only to nearby tokens within a fixed size sliding window.No contact between distant tokens yet.
+In the second layer and onwards, in a sense, a token can attend to information that was already aggregated from its neighbors within it's window in the previous layer. Given each layer has a sliding window of size 2𝑤 (plus minus w), then after two layers, a token has access to information from about 4𝑤 tokens away (give or take plus or minus 2). then 8w and so on.
+
 """
 
 part4_q2 = r"""
 **Your answer:**
 
+There is the dilated sliding window attention, which instead of attending only to adjacent tokens of the current token. we attend to a dilated set of tokens at each layer. In other words, given a dilation factor of 4, compared to a window of size 8, instead of attending to the four tokens before and the four tokens after, with dilated attention, if the current token is i, we attend to tokens i+1,i+2,i+4 and i+8 and tokens i-1,i-2,i-4, and i-8.
+Why would we do this? 
+this preserves some of the local context of a token (i+1,i+2,i+4 for example) and with a higher dilation factor this can attend to further away tokens at a decaying density.
+Just like a person might read text sometimes and glance a bit further than the current word he is reading and it's neighboring words.
+The time complexity stays the same.
 
 """
 
