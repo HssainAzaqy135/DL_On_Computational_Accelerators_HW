@@ -255,7 +255,7 @@ def part4_transformer_encoder_hyperparams():
         num_heads = 8,
         num_layers = 3,
         hidden_dim = 100,
-        window_size = 16,
+        window_size = 24,
         droupout = 0.1,
         lr=0.0002,
     )
@@ -332,7 +332,9 @@ RNN are more data efficient as they learn directly the sequential dependencies i
 
 RNN are sequential and process one token at a time, while transformers require entire sequences to compute attention. therfore RNN are more useful when fast and light computation is needed for example: in real time speach recognition.
 
-RNN usualy require lower memory usage, as they have lower memory complexity.$O(n) (hidden states for BPTT) in constrast to O(n^2) (Self-attentionn×n matrix)$in transformers in sequence lenght.
+RNN usualy require lower memory usage, as they have lower memory complexity.
+$O(n)$ hidden states for BPTT in constrast to  
+$O(n^2)$ (Self-attention n×n matrix) in transformers in sequence length.
 
 
 
