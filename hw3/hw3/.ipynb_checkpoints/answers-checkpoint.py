@@ -290,21 +290,72 @@ The time complexity stays the same.
 
 part5_q1 = r"""
 **Your answer:**
-
+We can see that the fine tuned model performed significantly better that the model that we trained from scratch. The pretrained models are trained on large-scale datasets and exhibit impressive performance, they have good generalization and we can suppose that the google researchers did a good job in building an optimized architecture. As we used a smaller dataset and probably a less advanced architecture, we got subpar performance. However, this will not be the case for every task as the pretrained model was trained to get the optimized results for a specific task or tokens. In this case trining a full model ourselves for this specific task may be better than using a model that is optimized for a different task.
 
 """
 
 part5_q2 = r"""
 **Your answer:**
-
+In this specific case the model is unlikely to finetune succsesfully for the task. The last two layers expect a specific configuration and weights that were trained on a specific architecture for a given task. When we finetune the internal layers we change the capture efficiency of low level features but we do not refine output for the specific task. Therfore the results would be worse.
 
 """
 
 
 part5_q3= r"""
 **Your answer:**
+We cannot use BERT as it is because it lacks a decoder and autoregressive mechanism. The changes that we must add are:
+
+1) add a decoder that can generate target test while keeping the original encoder as source text processor
+
+2) We than have to train the model for the specific task of seq2seq -encoder processes the input text, decoder generates the translated output.
+
+3) Than we should handle input and output tokens in the following way:
+
+The encoder BERT will encode the input into contextual embeddings - 
+
+$embeddings = BERT(X)$
+
+The decoder takes h and generates the target tokens sequentially:
+
+$y_t = Decoder(h,y_1,y_2,...y_t-1)$
+
+Than we should add look-ahead mask in the decoder to prevent the model from seeing future tokens during training and inference.
+
+"""
+
+
+part5_q4= r"""
+**Your answer:**
+There are a few reasons to choose RNNs over transformers:
+
+RNN are more data efficient as they learn directly the sequential dependencies in contrast to transformers that need large amount of pretraining, and massive data sets.
+
+RNN are sequential and process one token at a time, while transformers require entire sequences to compute attention. therfore RNN are more useful when fast and light computation is needed for example: in real time speach recognition.
+
+RNN usualy require lower memory usage, as they have lower memory complexity.$O(n) (hidden states for BPTT) in constrast to O(n^2) (Self-attentionn×n matrix)$in transformers in sequence lenght.
+
+
 
 
 """
+
+
+part5_q5= r"""
+NSP is "Next sequence Prediction". It learns the relation between sequences and its usefull for tasks like answering questions or generating meaningful paragraphs.
+The prediction accure in pre training before finetunning the model to specific tasks. 
+
+BERT processes the entire input sequence through its Transformer encoder layers, and in the final layer the  Classification Token (SLT) in extracted. The represantation of the token is than passed to a calssifier to predict which will be the next sentence. 
+The binary cross-entropy loss is used between the predicted label and the ground truth.
+This loss is combined with the Masked Language Modeling (MLM) loss to optimize the pre-training performance.
+
+It is not a crucial part of pre-training. in RoBERTa, researchers found that removing the NSP loss matches or slightly improves downstream task performance.
+
+ALBERT conjectures that NSP was ineffective because it’s not a difficult task when compared to masked language modeling. In a single task, it mixes both topic prediction and coherence prediction. The topic prediction part is easy to learn because it overlaps with the masked language model loss. Thus, NSP will give higher scores even when it hasn’t learned coherence prediction.
+
+"""
+
+
+
+
 
 # ==============
