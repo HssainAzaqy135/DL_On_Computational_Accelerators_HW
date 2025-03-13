@@ -1,0 +1,5 @@
+TODO:
+
+- Separate train,val and test sets []
+- Report train accuracy in train loops too []
+- Try Architecture of VAE from hw3 []
