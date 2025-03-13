@@ -8,6 +8,40 @@ from matplotlib import pyplot as plt
 # Needed for training
 from torch.optim.lr_scheduler import StepLR
 # ----------------------
+def plot_losses(train_losses, val_losses=None):
+    """Plots training and validation losses over epochs."""
+    plt.figure(figsize=(8, 5))
+    plt.plot(range(1, len(train_losses) + 1), train_losses, label='Training Loss')
+    
+    if val_losses is not None:
+        plt.plot(range(1, len(val_losses) + 1), val_losses, label='Validation Loss')
+    
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    title =""
+    if val_losses is not None:
+        title = 'Training and Validation Loss'
+    else:
+        title = 'Training Loss'
+    plt.title(title)
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def plot_accuracies(train_accuracies, val_accuracies):
+    """Plots training and validation accuracies over epochs."""
+    plt.figure(figsize=(8, 5))
+    plt.plot(range(1, len(train_accuracies) + 1), train_accuracies, label='Training Accuracy')
+    plt.plot(range(1, len(val_accuracies) + 1), val_accuracies, label='Validation Accuracy')
+    
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy (%)')
+    plt.title('Training and Validation Accuracy')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+# ----------------------
 class FinalClassifier(nn.Module):
     def __init__(self, latent_dim=128):
         super().__init__()
@@ -29,21 +63,25 @@ class FinalClassifier(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
         
-    def fit_classifier(self,encoder, train_loader, val_loader, num_epochs=50, learning_rate=1e-3):
+    def fit_classifier(self, encoder, train_loader, val_loader, num_epochs=50, learning_rate=1e-3):
         device = self.get_device()
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
         scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
-        
+            
         encoder = encoder.to(device)
         encoder.eval()
         
         train_losses = []
         val_accuracies = []
-        
+        train_accuracies = []
+            
         for epoch in range(num_epochs):
             self.train()
             total_train_loss = 0
+            correct_train = 0
+            total_train = 0
+            
             for data, target in train_loader:
                 data, target = data.to(device), target.to(device)
                 with torch.no_grad():
@@ -54,11 +92,16 @@ class FinalClassifier(nn.Module):
                 loss.backward()
                 optimizer.step()
                 total_train_loss += loss.item()
+                _, predicted = torch.max(output.data, 1)
+                total_train += target.size(0)
+                correct_train += (predicted == target).sum().item()
             
             scheduler.step()
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
-            
+            train_accuracy = 100 * correct_train / total_train
+            train_accuracies.append(train_accuracy)
+                
             self.eval()
             correct = 0
             total = 0
@@ -73,24 +116,11 @@ class FinalClassifier(nn.Module):
             
             val_accuracy = 100 * correct / total
             val_accuracies.append(val_accuracy)
+                
+            print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%, Val Accuracy: {val_accuracy:.2f}%, LR: {scheduler.get_last_lr()[0]:.6f}')
             
-            print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_train_loss:.4f}, Val Accuracy: {val_accuracy:.2f}%, LR: {scheduler.get_last_lr()[0]:.6f}')
-        
-        plt.figure(figsize=(10, 5))
-        plt.subplot(1, 2, 1)
-        plt.plot(range(1, num_epochs + 1), train_losses, label='Training Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.title('Training Loss')
-        plt.legend()
-        plt.subplot(1, 2, 2)
-        plt.plot(range(1, num_epochs + 1), val_accuracies, label='Validation Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy (%)')
-        plt.title('Validation Accuracy')
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
+        return train_losses, train_accuracies,val_accuracies
+
 
 
 def test_classifier(encoder, classifier, test_loader):
@@ -150,16 +180,12 @@ class MNISTAutoencoder(nn.Module):
 
     def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
         device = self.get_device()
-        
-        criterion = nn.MSELoss()  # Reconstruction loss
+        criterion = nn.MSELoss()
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-        
-        # Lists to store losses
         train_losses = []
         val_losses = []
         
         for epoch in range(num_epochs):
-            # Training phase
             self.train()
             total_train_loss = 0
             for batch_idx, (data, _) in enumerate(train_loader):
@@ -169,16 +195,14 @@ class MNISTAutoencoder(nn.Module):
                 loss = criterion(reconstructed, data)
                 loss.backward()
                 optimizer.step()
-                
                 total_train_loss += loss.item()
             
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
             
-            # Validation phase
             self.eval()
             total_val_loss = 0
-            with torch.no_grad():  # No gradient computation for validation
+            with torch.no_grad():
                 for data, _ in val_loader:
                     data = data.to(device)
                     reconstructed, _ = self.forward(data)
@@ -190,17 +214,7 @@ class MNISTAutoencoder(nn.Module):
             
             print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}')
         
-        # Plotting
-        plt.figure(figsize=(10, 5))
-        plt.plot(range(1, num_epochs + 1), train_losses, label='Training Loss')
-        plt.plot(range(1, num_epochs + 1), val_losses, label='Validation Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.title('Training and Validation Loss Over Epochs')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
-
+        return train_losses, val_losses
 
 # ---------- CIFAR10 ----------------------
 class CIFAR10Autoencoder(nn.Module):
@@ -254,20 +268,18 @@ class CIFAR10Autoencoder(nn.Module):
     def get_device(self):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
-        
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=30, learning_rate=5e-4):
+
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
         device = self.get_device()
         criterion = nn.MSELoss()
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-        scheduler = StepLR(optimizer, step_size=15, gamma=0.1)  # Reduce LR every 15 epochs
-        
         train_losses = []
         val_losses = []
         
         for epoch in range(num_epochs):
             self.train()
             total_train_loss = 0
-            for data, _ in train_loader:
+            for batch_idx, (data, _) in enumerate(train_loader):
                 data = data.to(device)
                 optimizer.zero_grad()
                 reconstructed, _ = self.forward(data)
@@ -276,7 +288,6 @@ class CIFAR10Autoencoder(nn.Module):
                 optimizer.step()
                 total_train_loss += loss.item()
             
-            scheduler.step()
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
             
@@ -292,14 +303,6 @@ class CIFAR10Autoencoder(nn.Module):
             avg_val_loss = total_val_loss / len(val_loader)
             val_losses.append(avg_val_loss)
             
-            print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, LR: {scheduler.get_last_lr()[0]:.6f}')
+            print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}')
         
-        plt.figure(figsize=(10, 5))
-        plt.plot(range(1, num_epochs + 1), train_losses, label='Training Loss')
-        plt.plot(range(1, num_epochs + 1), val_losses, label='Validation Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.title('Training and Validation Loss')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
+        return train_losses, val_losses

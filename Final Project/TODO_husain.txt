@@ -1,5 +1,6 @@
 TODO:
 
-- Separate train,val and test sets []
-- Report train accuracy in train loops too []
+- Separate train,val and test sets [V]
+- Report train accuracy in train loops too [V]
 - Try Architecture of VAE from hw3 []
+- Add epoch timing []
