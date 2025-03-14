@@ -1,6 +1,11 @@
-TODO:
+Done:
 
 - Separate train,val and test sets [V]
 - Report train accuracy in train loops too [V]
-- Try Architecture of VAE from hw3 []
-- Add epoch timing []
+- Add epoch timing [V]
+- Try leakyRelu [V]
+- Try new reduced Architecture [V]
+
+Todo:
+- 1.2.2 for cifar10 []
+- separate models, plotting and testing to different files []
