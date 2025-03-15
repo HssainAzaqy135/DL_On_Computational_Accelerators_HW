@@ -52,6 +52,7 @@ class FinalClassifier(nn.Module):
                 data, target = data.to(device), target.to(device)
                 with torch.no_grad():
                     latent = encoder(data)
+                
                 optimizer.zero_grad()
                 output = self.forward(latent)
                 loss = criterion(output, target)
@@ -170,7 +171,7 @@ class MNISTAutoencoder(nn.Module):
         return train_losses, val_losses
 # ---------- CIFAR10 ----------------------
 class CIFAR10Autoencoder(nn.Module):
-    def __init__(self, latent_dim=128,dropout_prob = 0.3):
+    def __init__(self, latent_dim=128,dropout_prob = 0.35):
         super().__init__()
         
         # Encoder
@@ -186,12 +187,12 @@ class CIFAR10Autoencoder(nn.Module):
             nn.Conv2d(128, 256, 3, stride=2, padding=1), # 16x16x128 -> 8x8x256
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(256),
-
+            
             nn.Conv2d(256, 128, kernel_size=1, stride=1),  # Reduce channels 256 -> 128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
-
-            nn.Flatten(),                                 # 8×8×128 = 8192
+            
+            nn.Flatten(),                                 # 8x8×128 = 8192
             nn.Linear(8 * 8 * 128, latent_dim),                 # 8192 -> latent_dim
             # nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(p=dropout_prob)
@@ -202,24 +203,25 @@ class CIFAR10Autoencoder(nn.Module):
             nn.Linear(latent_dim, 8 * 8 * 128),  # latent_dim -> 8192
             nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(p=dropout_prob),
-
+        
             nn.Unflatten(1, (128, 8, 8)),  # Reshape to 8x8x128
-
+        
             nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1),  # 8x8x128 -> 16x16x64
             nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(64),
-
-            nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1),  # 16x16x64 -> 32x32x32
+            nn.BatchNorm2d(64), 
+        
+            nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1), # 16x16x64 ->32x32x32
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(32),
-
-            nn.Conv2d(32, 32, 3, stride=1, padding=1),   # Refinement: 32x32x32 -> 32x32x32
+        
+            nn.ConvTranspose2d(32, 32, 3, stride=1, padding=1, output_padding=0), # 32x32x32 -> 32x32x32
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(32),
-
-            nn.Conv2d(32, 3, 3, stride=1, padding=1),    # 32x32x32 -> 32x32x3
-            nn.Tanh()                                    # Output [-1, 1]
+        
+            nn.ConvTranspose2d(32, 3, 3, stride=1, padding=1),  # 32x32x32 -> 32x32x3
+            nn.Tanh()  # Output [-1, 1]
         )
+
 
     
     def forward(self, x):

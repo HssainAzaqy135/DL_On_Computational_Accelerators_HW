@@ -10,4 +10,6 @@ Done:
 - 1.2.2 for cifar10 [V]
 - separate models, plotting and testing to different files [V]
 
+- Try MOE encoder [V, not better , way slower]
+
 Todo:
