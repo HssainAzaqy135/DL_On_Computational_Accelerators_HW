@@ -5,7 +5,9 @@ Done:
 - Add epoch timing [V]
 - Try leakyRelu [V]
 - Try new reduced Architecture [V]
+- Try removing the last activation from the cifar encoder [V]
+
+- 1.2.2 for cifar10 [V]
+- separate models, plotting and testing to different files [V]
 
 Todo:
-- 1.2.2 for cifar10 []
-- separate models, plotting and testing to different files []
