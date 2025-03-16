@@ -12,6 +12,8 @@ Done:
 
 - Try MOE encoder [V, not better , way slower]
 
+- part 3 implementation [V]
+- try high batch sizes like 128 , 256 ,512[V]
 Todo:
-- part 3 implementation []
-- try high batch sizes like 128 and 256 []
+ - fix cifar10 part3 convergence []
+	- try other modefiers like color jitter[ ]
