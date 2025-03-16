@@ -13,3 +13,5 @@ Done:
 - Try MOE encoder [V, not better , way slower]
 
 Todo:
+- part 3 implementation []
+- try high batch sizes like 128 and 256 []
