@@ -74,35 +74,64 @@ from models_part1 import FinalClassifier
 
 #         return loss
 
+# class NTXentLoss(nn.Module):
+#     def __init__(self, batch_size, temperature=0.5):
+#         super(NTXentLoss, self).__init__()
+#         self.temperature = temperature
+#         self.batch_size = batch_size
+#         self.criterion = nn.CrossEntropyLoss()
+
+#     def forward(self, z_i, z_j):
+#         N = 2 * self.batch_size
+#         z = torch.cat((z_i, z_j), dim=0)  # Concatenate the embeddings of the augmented images
+#         z = F.normalize(z, dim=1)  # Normalize the embeddings
+#         device = z.device
+#         similarity_matrix = torch.mm(z, z.T)  # Compute similarity matrix
+#         labels = torch.cat([torch.arange(self.batch_size),torch.arange(self.batch_size)], dim=0)  # Create labels for contrastive loss
+#         labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float().to(device)  # Binary matrix for positive pairs
+#         logits = similarity_matrix / self.temperature  # Scale by temperature
+
+#         # Mask out the diagonal (i.e., self-similarities)
+#         mask = torch.eye(N, dtype=torch.bool).to(device)  # Identity matrix (diagonal is 1)
+#         print(f"N = {N}, z shape  = {z.shape}, mask shape = {mask.shape}, logits shape = {logits.shape}")
+        
+#         logits = logits[~mask].view(N, N - 1)  # Remove diagonal elements (self-similarities)
+#         labels = labels[~mask].view(N, N - 1)  # Remove diagonal elements from labels
+#         loss = self.criterion(logits, labels.argmax(dim=1))  # Compute the cross-entropy loss
+        
+#         return loss
+
+    
 class NTXentLoss(nn.Module):
     def __init__(self, batch_size, temperature=0.5):
         super(NTXentLoss, self).__init__()
         self.temperature = temperature
         self.batch_size = batch_size
         self.criterion = nn.CrossEntropyLoss()
-
-    def forward(self, z_i, z_j):
-        N = 2 * self.batch_size
-        z = torch.cat((z_i, z_j), dim=0)  # Concatenate the embeddings of the augmented images
-        z = F.normalize(z, dim=1)  # Normalize the embeddings
-        device = z.device
-        similarity_matrix = torch.mm(z.T, z)  # Compute similarity matrix
-        labels = torch.cat([torch.arange(self.batch_size),torch.arange(self.batch_size)], dim=0)  # Create labels for contrastive loss
-        labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float().to(device)  # Binary matrix for positive pairs
-        logits = similarity_matrix / self.temperature  # Scale by temperature
-
-        # Mask out the diagonal (i.e., self-similarities)
-        mask = torch.eye(N, dtype=torch.bool).to(device)  # Identity matrix (diagonal is 1)
-        # print(f"N = {N}, z shape  = {z.shape}, mask shape = {mask.shape}, logits shape = {logits.shape}")
         
-        logits = logits[~mask].view(N, N - 1)  # Remove diagonal elements (self-similarities)
-        labels = labels[~mask].view(N, N - 1)  # Remove diagonal elements from labels
-        loss = self.criterion(logits, labels.argmax(dim=1))  # Compute the cross-entropy loss
+    def forward(self, z_i, z_j):
+        # Flatten spatial and channel dimensions to get feature vectors
+        z_i_flat = z_i.reshape(self.batch_size, -1)  # [batch_size, Height*Width*channels]
+        z_j_flat = z_j.reshape(self.batch_size, -1)  # [batch_size, Height*Width*channels]
+        
+        N = 2 * self.batch_size
+        z = torch.cat((z_i_flat, z_j_flat), dim=0)  # [2*batch_size, Height*Width*channels]
+        z = F.normalize(z, dim=1)  # Normalize along feature dimension
+        
+        device = z.device
+        similarity_matrix = torch.mm(z, z.T)  # [2*batch_size, 2*batch_size]
+        
+        labels = torch.cat([torch.arange(self.batch_size), torch.arange(self.batch_size)], dim=0)
+        labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float().to(device)
+        
+        logits = similarity_matrix / self.temperature
+        mask = torch.eye(N, dtype=torch.bool).to(device)
+        # print(f"N = {N}, z shape  = {z.shape}, mask shape = {mask.shape}, logits shape = {logits.shape}")
+        logits = logits[~mask].view(N, N - 1)
+        labels = labels[~mask].view(N, N - 1)
+        loss = self.criterion(logits, labels.argmax(dim=1))
         
         return loss
-
-    
-
 
 # --------- Auxiliry ------------------
 # Define the augmentation function that will be applied during training
@@ -173,7 +202,7 @@ class MnistSimCLR(nn.Module):
                 # Forward pass (compute embeddings for augmented images)
                 z_i = self(aug1)  # Get the embeddings for the first augmentation
                 z_j = self(aug2)  # Get the embeddings for the second augmentation
-        
+                # print(f"z_i shape {z_i.shape}, z_j shape {z_j.shape}")
                 # Compute loss
                 loss = criterion(z_i, z_j)
         
