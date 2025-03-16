@@ -107,29 +107,37 @@ class NTXentLoss(nn.Module):
         super(NTXentLoss, self).__init__()
         self.temperature = temperature
         self.batch_size = batch_size
-        self.criterion = nn.CrossEntropyLoss()
         
     def forward(self, z_i, z_j):
-        # Flatten spatial and channel dimensions to get feature vectors
-        z_i_flat = z_i.reshape(self.batch_size, -1)  # [batch_size, Height*Width*channels]
-        z_j_flat = z_j.reshape(self.batch_size, -1)  # [batch_size, Height*Width*channels]
+        # Flatten spatial and channel dimensions
+        z_i_flat = z_i.reshape(self.batch_size, -1)
+        z_j_flat = z_j.reshape(self.batch_size, -1)
         
         N = 2 * self.batch_size
-        z = torch.cat((z_i_flat, z_j_flat), dim=0)  # [2*batch_size, Height*Width*channels]
-        z = F.normalize(z, dim=1)  # Normalize along feature dimension
+        z = torch.cat((z_i_flat, z_j_flat), dim=0)
+        z = F.normalize(z, dim=1)
         
         device = z.device
-        similarity_matrix = torch.mm(z, z.T)  # [2*batch_size, 2*batch_size]
+
+        similarity_matrix = torch.mm(z, z.T) / self.temperature
+
+        indices = torch.arange(0, N, device=device)
+        labels = torch.cat([torch.arange(self.batch_size, device=device), 
+                           torch.arange(self.batch_size, device=device)])
+                           
+        positive_mask = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
+        # no self-similarities in positive mask
+        identity_mask = torch.eye(N, device=device)
+        positive_mask = positive_mask - identity_mask
         
-        labels = torch.cat([torch.arange(self.batch_size), torch.arange(self.batch_size)], dim=0)
-        labels = (labels.unsqueeze(0) == labels.unsqueeze(1)).float().to(device)
+        # numerical stability
+        logits_max, _ = torch.max(similarity_matrix, dim=1, keepdim=True)
+        logits = similarity_matrix - logits_max.detach()
         
-        logits = similarity_matrix / self.temperature
-        mask = torch.eye(N, dtype=torch.bool).to(device)
-        # print(f"N = {N}, z shape  = {z.shape}, mask shape = {mask.shape}, logits shape = {logits.shape}")
-        logits = logits[~mask].view(N, N - 1)
-        labels = labels[~mask].view(N, N - 1)
-        loss = self.criterion(logits, labels.argmax(dim=1))
+        exp_logits = torch.exp(logits)
+        log_prob = logits - torch.log(exp_logits.sum(dim=1, keepdim=True))
+        mean_log_prob_pos = (positive_mask * log_prob).sum(1) / positive_mask.sum(1)
+        loss = -mean_log_prob_pos.mean()
         
         return loss
 
@@ -150,8 +158,9 @@ class SimCLRTransform:
 # --------- MNIST ---------------------
 
 class MnistSimCLR(nn.Module):
-    def __init__(self, latent_dim=128,dropout_prob  = 0.1):
+    def __init__(self, latent_dim=128,dropout_prob  = 0.1,temperature = 0.5):
         super().__init__()
+        self.temperature = temperature
         self.aug_func = SimCLRTransform()  # Augmentation function
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 14x14x32
@@ -179,7 +188,7 @@ class MnistSimCLR(nn.Module):
         
     def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
         device = self.get_device()
-        criterion = NTXentLoss(batch_size=train_loader.batch_size, temperature=0.5).to(device)  # NT-Xent loss
+        criterion = NTXentLoss(batch_size=train_loader.batch_size, temperature=self.temperature).to(device)  # NT-Xent loss
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.25)
 
