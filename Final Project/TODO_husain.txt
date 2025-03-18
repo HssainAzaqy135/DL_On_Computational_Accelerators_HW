@@ -14,6 +14,12 @@ Done:
 
 - part 3 implementation [V]
 - try high batch sizes like 128 , 256 ,512[V]
+
+
 Todo:
  - fix cifar10 part3 convergence []
-	- try other modefiers like color jitter[ ]
+	- try other modefiers like color jitter[V]
+	- try grad clipping [V]
+
+Important:!!!!!!!!!!!!11
+- apply all clippings of augmentations to mnist and cifar10 together []

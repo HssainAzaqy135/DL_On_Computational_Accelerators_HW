@@ -5,49 +5,57 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as transforms
+import torchvision.models
 # Needed for training
 import time
 from torch.optim.lr_scheduler import StepLR
 from models_part1 import FinalClassifier
 # --------- Loss ----------------------
 class NTXentLoss(nn.Module):
-    def __init__(self, batch_size, temperature=0.5):
-        super(NTXentLoss, self).__init__()
+    def __init__(self, temperature=0.5,eps = 1e-12):
+        super().__init__()
         self.temperature = temperature
-        self.batch_size = batch_size
-        
-    def forward(self, z_i, z_j):
-        # Flatten spatial and channel dimensions
-        z_i_flat = z_i.reshape(self.batch_size, -1)
-        z_j_flat = z_j.reshape(self.batch_size, -1)
-        # print(f"shape of z_i = {z_i.shape} and flat is {z_i_flat.shape}")
-        N = 2 * self.batch_size
-        z = torch.cat((z_i_flat, z_j_flat), dim=0)
-        z = F.normalize(z, dim=1)
-        
-        device = z.device
+        self.eps = eps
 
-        similarity_matrix = torch.mm(z, z.T) / self.temperature
+    def forward(self, z1, z2):
+        """
+        Compute the NT-Xent loss for two sets of augmented embeddings.
 
-        indices = torch.arange(0, N, device=device)
-        labels = torch.cat([torch.arange(self.batch_size, device=device), 
-                           torch.arange(self.batch_size, device=device)])
-                           
-        positive_mask = (labels.unsqueeze(0) == labels.unsqueeze(1)).float()
-        # no self-similarities in positive mask
-        identity_mask = torch.eye(N, device=device)
-        positive_mask = positive_mask - identity_mask
+        Args:
+            z1 (torch.Tensor): First set of augmented embeddings [batch_size, out_dim].
+            z2 (torch.Tensor): Second set of augmented embeddings [batch_size, out_dim].
+
+        Returns:
+            torch.Tensor: Scalar loss value (mean over the batch).
+        """
+        batch_size = z1.size(0)
+        
+        # Normalize embeddings
+        z1 = F.normalize(z1, dim=1)
+        z2 = F.normalize(z2, dim=1)
+        z = torch.cat([z1, z2], dim=0)  # [2N, out_dim]
+
+        # Compute similarity matrix
+        sim_matrix = torch.matmul(z, z.T) / self.temperature  # [2N, 2N]
+        
+        # Mask self-similarities
+        mask = torch.eye(2 * batch_size, dtype=torch.bool, device=z.device)
+        sim_matrix = sim_matrix.masked_fill(mask, -1e9)
         
         # numerical stability
-        logits_max, _ = torch.max(similarity_matrix, dim=1, keepdim=True)
-        logits = similarity_matrix - logits_max.detach()
+        sim_max, _ = torch.max(sim_matrix, dim=1, keepdim=True)
+        sim_matrix_stable = sim_matrix - sim_max
         
-        exp_logits = torch.exp(logits)
-        log_prob = logits - torch.log(exp_logits.sum(dim=1, keepdim=True))
-        mean_log_prob_pos = (positive_mask * log_prob).sum(1) / positive_mask.sum(1)
-        loss = -mean_log_prob_pos.mean()
+        # Extract positive pair sims
+        pos_sim = torch.cat([torch.diag(sim_matrix_stable, batch_size), 
+                             torch.diag(sim_matrix_stable, -batch_size)])
         
-        return loss
+        exp_sim = torch.exp(sim_matrix_stable)
+        denom = exp_sim.sum(dim=1) + self.eps  # Add epsilon to avoid log(0)
+        
+        # Compute loss in log domain
+        loss = -pos_sim + torch.log(denom)
+        return loss.mean()
 
 # --------- Auxiliry ------------------
 # Define the augmentation function that will be applied during training
@@ -55,10 +63,8 @@ class SimCLRTransform:
     def __init__(self,size = None):
         self.transform = transforms.Compose([
             transforms.RandomResizedCrop(size, scale=(0.6, 1.0)),
-            transforms.RandomAffine(degrees=15, translate=(0.2, 0.2)),
-            transforms.RandomApply([
-                transforms.ColorJitter(0.2, 0.2, 0.2, 0.1)
-            ], p=0.6),
+            transforms.RandomRotation(10),
+            transforms.RandomHorizontalFlip()           
         ])
 
     def __call__(self, image):
@@ -98,7 +104,7 @@ class MnistSimCLR(nn.Module):
         
     def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
         device = self.get_device()
-        criterion = NTXentLoss(batch_size=train_loader.batch_size, temperature=self.temperature).to(device)  # NT-Xent loss
+        criterion = NTXentLoss(temperature=self.temperature).to(device)
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
@@ -126,9 +132,10 @@ class MnistSimCLR(nn.Module):
                 loss = criterion(z_i, z_j)
         
                 # Backward pass and optimization
-                optimizer.zero_grad()  #  
-                loss.backward()  #  
-                optimizer.step()  #  
+                optimizer.zero_grad() 
+                loss.backward()
+                # torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)  # Clip gradients
+                optimizer.step() 
         
                 total_train_loss += loss.item()   
             
@@ -208,7 +215,7 @@ class Cifar10SimCLR(nn.Module):
         
     def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
         device = self.get_device()
-        criterion = NTXentLoss(batch_size=train_loader.batch_size, temperature=self.temperature).to(device)  # NT-Xent loss
+        criterion = NTXentLoss(temperature=self.temperature).to(device)
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
@@ -225,12 +232,23 @@ class Cifar10SimCLR(nn.Module):
                 images = images.to(device)  # Move the data to the device
                 
                 # Create augmented pairs (two augmented versions of the same image)
-                aug1 = self.aug_func(images)
-                aug2 = self.aug_func(images)
-        
+                aug1 = self.aug_func(images)#.clamp(min=-1,max =1)
+                aug2 = self.aug_func(images)#.clamp(min=-1,max =1)
+                # # Debug
+                # if torch.isnan(aug1).any() or torch.isnan(aug2).any():
+                #     print("NaN detected in augmented images!")
+                #     print("aug1 min:", aug1.min().item(), "aug1 max:", aug1.max().item())
+                #     print("aug2 min:", aug2.min().item(), "aug2 max:", aug2.max().item())
+                #     exit()  # Stop training to investigate
                 # Forward pass (compute embeddings for augmented images)
                 z_i = self(aug1)
                 z_j = self(aug2)
+                # # Debug
+                # if torch.isnan(z_i).any() or torch.isnan(z_j).any():
+                #     print("NaN detected in embeddings before loss calculation!")
+                #     print("z_i min:", z_i.min().item(), "z_i max:", z_i.max().item())
+                #     print("z_j min:", z_j.min().item(), "z_j max:", z_j.max().item())
+                #     exit()
 
                 # Compute loss
                 loss = criterion(z_i, z_j)
@@ -238,6 +256,7 @@ class Cifar10SimCLR(nn.Module):
                 # Backward pass and optimization
                 optimizer.zero_grad() 
                 loss.backward()
+                # torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
                 optimizer.step()
         
                 total_train_loss += loss.item()   
