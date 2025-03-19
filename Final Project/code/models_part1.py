@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from matplotlib import pyplot as plt
 import time
+from torchvision.models import resnet18
 # Needed for training
 from torch.optim.lr_scheduler import StepLR
 # ----------------------
@@ -130,7 +131,7 @@ class MNISTAutoencoder(nn.Module):
 
     def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
         device = self.get_device()
-        criterion = nn.MSELoss()
+        criterion = nn.L1Loss()
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.25)
         train_losses = []
@@ -171,7 +172,7 @@ class MNISTAutoencoder(nn.Module):
         return train_losses, val_losses
 # ---------- CIFAR10 ----------------------
 class CIFAR10Autoencoder(nn.Module):
-    def __init__(self, latent_dim=128,dropout_prob = 0.35):
+    def __init__(self, latent_dim=128,dropout_prob = 0.35,resnet  = True):
         super().__init__()
         
         # Encoder
@@ -197,29 +198,38 @@ class CIFAR10Autoencoder(nn.Module):
             # nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(p=dropout_prob)
         )
-
+        if(resnet):
+            self.encoder = resnet18(pretrained = False)
+            self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+            self.encoder.maxpool = nn.Identity()
+            self.encoder.fc = nn.Linear(512, latent_dim)
+        
         # **Smaller but logically same Decoder**
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 8 * 8 * 128),  # latent_dim -> 8192
+            nn.Linear(latent_dim, 4 * 4 * 512),  # latent_dim -> 8192
             nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(p=dropout_prob),
         
-            nn.Unflatten(1, (128, 8, 8)),  # Reshape to 8x8x128
+            nn.Unflatten(1, (512, 4, 4)),  # Reshape to 8x8x128
         
-            nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1),  # 8x8x128 -> 16x16x64
+            nn.ConvTranspose2d(512, 256, 3, stride=2, padding=1, output_padding=1),  # 4x4x512 -> 8x8x256
             nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(64), 
+            nn.BatchNorm2d(256), 
         
-            nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1), # 16x16x64 ->32x32x32
+            nn.ConvTranspose2d(256, 128, 3, stride=2, padding=1, output_padding=1), # 8x8x256 ->16x16x128
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.BatchNorm2d(128),
+        
+            nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1), # 16x16x128 -> 32x32x64
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.BatchNorm2d(64),
+            
+            nn.ConvTranspose2d(64, 32, 3, stride=1, padding=1, output_padding=0), # 32x32x64 -> 32x32x32
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(32),
-        
-            nn.ConvTranspose2d(32, 32, 3, stride=1, padding=1, output_padding=0), # 32x32x32 -> 32x32x32
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(32),
-        
+            
             nn.ConvTranspose2d(32, 3, 3, stride=1, padding=1),  # 32x32x32 -> 32x32x3
-            nn.Tanh()  # Output [-1, 1]
+            nn.Sigmoid()  # Output [0, 1]
         )
 
 
@@ -235,7 +245,7 @@ class CIFAR10Autoencoder(nn.Module):
 
     def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
         device = self.get_device()
-        criterion = nn.MSELoss()
+        criterion = nn.L1Loss()
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.25)
         train_losses = []

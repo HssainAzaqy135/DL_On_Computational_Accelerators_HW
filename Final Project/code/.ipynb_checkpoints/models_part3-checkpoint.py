@@ -6,6 +6,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 import torchvision.models
+from torchvision.models import resnet18
 # Needed for training
 import time
 from torch.optim.lr_scheduler import StepLR
@@ -173,7 +174,7 @@ class MnistSimCLR(nn.Module):
         return train_losses, val_losses
 # ------- CIFAR10 ---------------------
 class Cifar10SimCLR(nn.Module):
-    def __init__(self, latent_dim=128,dropout_prob  = 0.35,temperature = 0.5):
+    def __init__(self, latent_dim=128,dropout_prob  = 0.35,temperature = 0.5,resnet = True):
         super().__init__()
         self.temperature = temperature
         self.aug_func = SimCLRTransform(size = 32)  # Augmentation function
@@ -199,6 +200,13 @@ class Cifar10SimCLR(nn.Module):
             # nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(p=dropout_prob)
         )
+
+        if(resnet):
+            self.encoder = resnet18(pretrained = False)
+            self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+            self.encoder.maxpool = nn.Identity()
+            self.encoder.fc = nn.Linear(512, latent_dim)
+            
         self.projection = nn.Sequential(
             nn.Linear(latent_dim, 2*latent_dim),  # Project to a larger dimensional space before the final projection
             nn.LeakyReLU(negative_slope=0.01),

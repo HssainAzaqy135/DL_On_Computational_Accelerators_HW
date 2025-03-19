@@ -90,7 +90,7 @@ class MNISTClassifyingAutoencoder(nn.Module):
 
 # --------- CIFAR --------------------- 
 class CIFAR10ClassifyingAutoencoder(nn.Module):
-    def __init__(self, latent_dim=128,dropout_prob = 0.35):
+    def __init__(self, latent_dim=128,dropout_prob = 0.35,resnet = True):
         super().__init__()
         # Encoder
         self.encoder = nn.Sequential(
@@ -115,7 +115,11 @@ class CIFAR10ClassifyingAutoencoder(nn.Module):
             # nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(p=dropout_prob)
         )
-
+        if(resnet):
+            self.encoder = resnet18(pretrained = False)
+            self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+            self.encoder.maxpool = nn.Identity()
+            self.encoder.fc = nn.Linear(512, latent_dim)
         self.classifier = FinalClassifier(latent_dim)
     
     def forward(self, x):
