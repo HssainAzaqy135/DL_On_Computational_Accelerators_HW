@@ -15,12 +15,15 @@ class MNISTClassifyingAutoencoder(nn.Module):
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 14x14
             nn.LeakyReLU(negative_slope=0.01),
-            nn.Conv2d(32, 64, 3, stride=2, padding=1),  # 7x7
+            nn.Dropout(p=dropout_prob),                
+    
+            nn.Conv2d(32, 64, 3, stride=2, padding=1), # 7x7
             nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(p=dropout_prob),                
+            
             nn.Flatten(),
             nn.Linear(64 * 7 * 7, latent_dim),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob)
+            nn.LeakyReLU(negative_slope=0.01)          
         )
 
         self.classifier = FinalClassifier(latent_dim)
@@ -97,24 +100,27 @@ class CIFAR10ClassifyingAutoencoder(nn.Module):
             nn.Conv2d(3, 64, 3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(64),
-
+            nn.Dropout(p=dropout_prob),                  
+        
             nn.Conv2d(64, 128, 3, stride=2, padding=1),  # 32x32x64 -> 16x16x128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
-
+            nn.Dropout(p=dropout_prob),                  
+        
             nn.Conv2d(128, 256, 3, stride=2, padding=1), # 16x16x128 -> 8x8x256
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(256),
+            nn.Dropout(p=dropout_prob),                  #
             
             nn.Conv2d(256, 128, kernel_size=1, stride=1),  # Reduce channels 256 -> 128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
+            nn.Dropout(p=dropout_prob),                 
             
-            nn.Flatten(),                                 # 8x8×128 = 4092
-            nn.Linear(8 * 8 * 128, latent_dim),                 # 4092 -> latent_dim
-            # nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob)
-        )
+            nn.Flatten(),                                # 8x8×128 = 8192 (corrected from 4092)
+            nn.Linear(8 * 8 * 128, latent_dim),          # 8192 -> latent_dim
+            # nn.LeakyReLU(negative_slope=0.01),         
+        )                                               
         if(resnet):
             self.encoder = resnet18(pretrained = False)
             self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)

@@ -100,24 +100,27 @@ class MNISTAutoencoder(nn.Module):
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 14x14
             nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(p=dropout_prob),  
             nn.Conv2d(32, 64, 3, stride=2, padding=1),  # 7x7
             nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(p=dropout_prob),  
             nn.Flatten(),
             nn.Linear(64 * 7 * 7, latent_dim),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob)
+            nn.LeakyReLU(negative_slope=0.01)
+            
         )
         
         # Decoder
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, 64 * 7 * 7),
             nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob),
+            nn.Dropout(p=dropout_prob),  
             nn.Unflatten(1, (64, 7, 7)),
             nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1),
             nn.LeakyReLU(negative_slope=0.01),
+            nn.Dropout(p=dropout_prob),  
             nn.ConvTranspose2d(32, 1, 3, stride=2, padding=1, output_padding=1),
-            nn.Sigmoid() # for output to be  in [0,1]
+            nn.Sigmoid()  # for output to be in [0,1]
         )
     
     def forward(self, x):
@@ -180,56 +183,61 @@ class CIFAR10Autoencoder(nn.Module):
             nn.Conv2d(3, 64, 3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(64),
-
+            nn.Dropout(p=dropout_prob),                  
+        
             nn.Conv2d(64, 128, 3, stride=2, padding=1),  # 32x32x64 -> 16x16x128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
-
+            nn.Dropout(p=dropout_prob),                  
+        
             nn.Conv2d(128, 256, 3, stride=2, padding=1), # 16x16x128 -> 8x8x256
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(256),
+            nn.Dropout(p=dropout_prob),                  
             
             nn.Conv2d(256, 128, kernel_size=1, stride=1),  # Reduce channels 256 -> 128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
+                             
             
-            nn.Flatten(),                                 # 8x8×128 = 8192
-            nn.Linear(8 * 8 * 128, latent_dim),                 # 8192 -> latent_dim
-            # nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob)
+            nn.Flatten(),                                # 8x8×128 = 8192
+            nn.Linear(8 * 8 * 128, latent_dim),          # 8192 -> latent_dim
+            #nn.LeakyReLU(negative_slope=0.01)            
         )
-        if(resnet):
-            self.encoder = resnet18(pretrained = False)
+
+        if resnet:
+            self.encoder = resnet18(pretrained=False)
             self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
             self.encoder.maxpool = nn.Identity()
             self.encoder.fc = nn.Linear(512, latent_dim)
         
-        # **Smaller but logically same Decoder**
+        # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 4 * 4 * 512),  # latent_dim -> 8192
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob),
-        
-            nn.Unflatten(1, (512, 4, 4)),  # Reshape to 8x8x128
-        
+            nn.Linear(latent_dim, 4 * 4 * 512),          # latent_dim -> 8192
+            #nn.LeakyReLU(negative_slope=0.01),
+            nn.Unflatten(1, (512, 4, 4)),                # Reshape to 4x4x512
+            
             nn.ConvTranspose2d(512, 256, 3, stride=2, padding=1, output_padding=1),  # 4x4x512 -> 8x8x256
             nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(256), 
-        
-            nn.ConvTranspose2d(256, 128, 3, stride=2, padding=1, output_padding=1), # 8x8x256 ->16x16x128
+            nn.BatchNorm2d(256),
+            nn.Dropout(p=dropout_prob),                 
+            
+            nn.ConvTranspose2d(256, 128, 3, stride=2, padding=1, output_padding=1),  # 8x8x256 -> 16x16x128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
-        
-            nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1), # 16x16x128 -> 32x32x64
+            nn.Dropout(p=dropout_prob),                  
+            
+            nn.ConvTranspose2d(128, 64, 3, stride=2, padding=1, output_padding=1),   # 16x16x128 -> 32x32x64
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(64),
+            nn.Dropout(p=dropout_prob),                  
             
-            nn.ConvTranspose2d(64, 32, 3, stride=1, padding=1, output_padding=0), # 32x32x64 -> 32x32x32
+            nn.ConvTranspose2d(64, 32, 3, stride=1, padding=1, output_padding=0),    # 32x32x64 -> 32x32x32
             nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(32),
+            nn.BatchNorm2d(32),                
             
             nn.ConvTranspose2d(32, 3, 3, stride=1, padding=1),  # 32x32x32 -> 32x32x3
-            nn.Sigmoid()  # Output [0, 1]
+            nn.Tanh()  # Output [-1, 1]
         )
 
 
