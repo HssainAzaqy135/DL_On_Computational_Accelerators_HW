@@ -240,7 +240,7 @@ class CIFAR10Autoencoder(nn.Module):
             
             # 32x32x64 -> 32x32x3
             nn.ConvTranspose2d(64, 3, kernel_size=3, stride=1, padding=1),
-            nn.Tanh()
+            nn.Tanh() # for cifar normalization
         )
         print("Initializing weights ....")
         self.initialize_weights()
@@ -269,8 +269,8 @@ class CIFAR10Autoencoder(nn.Module):
                 nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1.0)  # Gamma initialized to 1
-                nn.init.constant_(m.bias, 0.0)    # Beta initialized to 0
+                nn.init.constant_(m.weight, 1.0)
+                nn.init.constant_(m.bias, 0.0)
 
     
     def forward(self, x):

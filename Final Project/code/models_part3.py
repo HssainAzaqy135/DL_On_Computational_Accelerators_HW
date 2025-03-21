@@ -62,10 +62,13 @@ class NTXentLoss(nn.Module):
 # Define the augmentation function that will be applied during training
 class SimCLRTransform:
     def __init__(self,size = None):
+        # Assumes the data is not normalized yet
         self.transform = transforms.Compose([
-            transforms.RandomResizedCrop(size, scale=(0.6, 1.0)),
-            transforms.RandomRotation(10),
-            transforms.RandomHorizontalFlip()           
+            transforms.RandomResizedCrop(size, scale=(0.5, 1.0)),
+            transforms.RandomHorizontalFlip(p = 0.3),
+            transforms.RandomApply([
+                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
+            ], p=0.8)
         ])
 
     def __call__(self, image):
@@ -78,7 +81,10 @@ class MnistSimCLR(nn.Module):
     def __init__(self, latent_dim=128,dropout_prob  = 0.1,temperature = 0.5):
         super().__init__()
         self.temperature = temperature
-        self.aug_func = SimCLRTransform(size = 28)  # Augmentation function
+          # Augmentation function
+        self.aug_func = SimCLRTransform(size = 28)
+        self.data_norm_func = transforms.Normalize(mean=[0.1307], std=[0.3081])
+
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 14x14x32
             nn.LeakyReLU(negative_slope=0.01),
@@ -126,8 +132,8 @@ class MnistSimCLR(nn.Module):
                 aug2 = self.aug_func(images)
         
                 # Forward pass (compute embeddings for augmented images)
-                z_i = self(aug1)  # Get the embeddings for the first augmentation
-                z_j = self(aug2)  # Get the embeddings for the second augmentation
+                z_i = self(self.data_norm_func(aug1))
+                z_j = self(self.data_norm_func(aug2))
                 # print(f"z_i shape {z_i.shape}, z_j shape {z_j.shape}")
                 # Compute loss
                 loss = criterion(z_i, z_j)
@@ -151,11 +157,11 @@ class MnistSimCLR(nn.Module):
             with torch.no_grad(): 
                 for images, _ in val_loader:
                     images = images.to(device)
-                    aug1 = self.aug_func(images)
-                    aug2 = self.aug_func(images)
-
-                    z_i = self(aug1)
-                    z_j = self(aug2)
+                    # No augmentation for val set
+                    # aug1 = self.aug_func(images)
+                    # aug2 = self.aug_func(images)
+                    z_i = self(self.data_norm_func(images))
+                    z_j = self(self.data_norm_func(images))
                     loss = criterion(z_i, z_j)
                     total_val_loss += loss.item()
 
@@ -177,7 +183,10 @@ class Cifar10SimCLR(nn.Module):
     def __init__(self, latent_dim=128,dropout_prob  = 0.1,temperature = 0.5):
         super().__init__()
         self.temperature = temperature
-        self.aug_func = SimCLRTransform(size = 32)  # Augmentation function
+        # Augmentation function
+        self.aug_func = SimCLRTransform(size = 32)
+        self.data_norm_func = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2470, 0.2435, 0.2616])
+        
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
             nn.LeakyReLU(negative_slope=0.01),
@@ -260,21 +269,10 @@ class Cifar10SimCLR(nn.Module):
                 # Create augmented pairs (two augmented versions of the same image)
                 aug1 = self.aug_func(images)#.clamp(min=-1,max =1)
                 aug2 = self.aug_func(images)#.clamp(min=-1,max =1)
-                # # Debug
-                # if torch.isnan(aug1).any() or torch.isnan(aug2).any():
-                #     print("NaN detected in augmented images!")
-                #     print("aug1 min:", aug1.min().item(), "aug1 max:", aug1.max().item())
-                #     print("aug2 min:", aug2.min().item(), "aug2 max:", aug2.max().item())
-                #     exit()  # Stop training to investigate
+
                 # Forward pass (compute embeddings for augmented images)
-                z_i = self(aug1)
-                z_j = self(aug2)
-                # # Debug
-                # if torch.isnan(z_i).any() or torch.isnan(z_j).any():
-                #     print("NaN detected in embeddings before loss calculation!")
-                #     print("z_i min:", z_i.min().item(), "z_i max:", z_i.max().item())
-                #     print("z_j min:", z_j.min().item(), "z_j max:", z_j.max().item())
-                #     exit()
+                z_i = self(self.data_norm_func(aug1))
+                z_j = self(self.data_norm_func(aug2))
 
                 # Compute loss
                 loss = criterion(z_i, z_j)
@@ -298,11 +296,12 @@ class Cifar10SimCLR(nn.Module):
             with torch.no_grad(): 
                 for images, _ in val_loader:
                     images = images.to(device)
-                    aug1 = self.aug_func(images)
-                    aug2 = self.aug_func(images)
-
-                    z_i = self(aug1)
-                    z_j = self(aug2)
+                    # No augmentation for val set
+                    # aug1 = self.aug_func(images)
+                    # aug2 = self.aug_func(images)
+                    
+                    z_i = self(self.data_norm_func(images))
+                    z_j = self(self.data_norm_func(images))
                     loss = criterion(z_i, z_j)
                     total_val_loss += loss.item()
 

@@ -240,7 +240,7 @@ class CIFAR10Autoencoder(nn.Module):
             
             # 32x32x64 -> 32x32x3
             nn.ConvTranspose2d(64, 3, kernel_size=3, stride=1, padding=1),
-            nn.Tanh()
+            nn.Tanh() # for cifar normalization
         )
         print("Initializing weights ....")
         self.initialize_weights()
