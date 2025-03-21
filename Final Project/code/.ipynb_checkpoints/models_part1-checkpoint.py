@@ -8,17 +8,17 @@ import time
 from torch.optim.lr_scheduler import StepLR
 # ----------------------
 class FinalClassifier(nn.Module):
-    def __init__(self, latent_dim=128):
+    def __init__(self, latent_dim=128,dropout_prob = 0.2):
         super().__init__()
         self.classifier = nn.Sequential(
             nn.Linear(latent_dim, 256),
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm1d(256),
-            nn.Dropout(0.2),
+            nn.Dropout(dropout_prob),
             nn.Linear(256, latent_dim),
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm1d(latent_dim),
-            nn.Dropout(0.2),
+            nn.Dropout(dropout_prob),
             nn.Linear(latent_dim, 10)
         )
     
@@ -122,7 +122,7 @@ class MNISTAutoencoder(nn.Module):
             nn.ConvTranspose2d(32, 1, 3, stride=2, padding=1, output_padding=1),
             nn.Sigmoid()  # for output to be in [0,1]
         )
-    
+        
     def forward(self, x):
         latent = self.encoder(x)
         reconstructed = self.decoder(latent)
@@ -195,33 +195,33 @@ class CIFAR10Autoencoder(nn.Module):
             nn.BatchNorm2d(256),
             nn.Dropout(p=dropout_prob),                  
             
-            nn.Conv2d(256, 256, kernel_size=3, stride=2,padding=1),  # 8x8x256 -> 4x4x256
+            nn.Conv2d(256, 512, kernel_size=3, stride=2,padding=1),  # 8x8x256 -> 4x4x512
             nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(256),
+            nn.BatchNorm2d(512),
             nn.Dropout(p=dropout_prob),                 
 
-            nn.Conv2d(256, 128, kernel_size=1, stride=1,padding=0),  # 4x4x256 -> 4x4x128
+            nn.Conv2d(512, 128, kernel_size=3, stride=2,padding=1),  # 4x4x512 -> 2x2x128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
             nn.Dropout(p=dropout_prob),
             
-            nn.Flatten(),                                # 4x4×128 = 2048
-            nn.Linear(4 * 4 * 128, latent_dim),          # 2048 -> latent_dim            
+            nn.Flatten(),                                # 2x2×128 = 512
+            nn.Linear(2 * 2 * 128, latent_dim),          # 512 -> latent_dim            
         )
         
         # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 4 * 4 * 128),          # latent_dim -> 8192
+            nn.Linear(latent_dim, 2 * 2 * 128),          # latent_dim -> 2048
             #nn.LeakyReLU(negative_slope=0.01),
-            nn.Unflatten(1, (128, 4, 4)),                # Reshape to 4x4x512
+            nn.Unflatten(1, (128, 2, 2)),                # Reshape to 2x2x128
             
-            nn.ConvTranspose2d(128, 256, kernel_size=1, stride=1, padding=0),
+            nn.ConvTranspose2d(128, 512, kernel_size=3, stride=2, padding=1,output_padding=1),
             nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(256),
+            nn.BatchNorm2d(512),
             nn.Dropout(p=dropout_prob),
             
-            # 4x4x256 -> 8x8x256
-            nn.ConvTranspose2d(256, 256, kernel_size=3, stride=2, padding=1, output_padding=1),
+            # 4x4x512 -> 8x8x256
+            nn.ConvTranspose2d(512, 256, kernel_size=3, stride=2, padding=1, output_padding=1),
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(256),
             nn.Dropout(p=dropout_prob),
@@ -242,7 +242,35 @@ class CIFAR10Autoencoder(nn.Module):
             nn.ConvTranspose2d(64, 3, kernel_size=3, stride=1, padding=1),
             nn.Tanh()
         )
-
+        print("Initializing weights ....")
+        self.initialize_weights()
+        print("Initializing weights DONE")
+        
+    def initialize_weights(self):
+        # Initialize convolutional and batchnorm layers
+        for m in self.decoder.modules():
+            if isinstance(m, nn.ConvTranspose2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu', a=0.01)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu', a=0.01)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+        
+        for m in self.encoder.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                if m.bias is not None:  # Bias exists unless explicitly disabled
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1.0)  # Gamma initialized to 1
+                nn.init.constant_(m.bias, 0.0)    # Beta initialized to 0
 
     
     def forward(self, x):

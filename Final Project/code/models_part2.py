@@ -93,40 +93,58 @@ class MNISTClassifyingAutoencoder(nn.Module):
 
 # --------- CIFAR --------------------- 
 class CIFAR10ClassifyingAutoencoder(nn.Module):
-    def __init__(self, latent_dim=128,dropout_prob = 0.35,resnet = True):
+    def __init__(self, latent_dim=128,dropout_prob = 0.1):
         super().__init__()
         # Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 64, 3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(64),
             nn.Dropout(p=dropout_prob),                  
         
-            nn.Conv2d(64, 128, 3, stride=2, padding=1),  # 32x32x64 -> 16x16x128
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),  # 32x32x64 -> 16x16x128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
             nn.Dropout(p=dropout_prob),                  
         
-            nn.Conv2d(128, 256, 3, stride=2, padding=1), # 16x16x128 -> 8x8x256
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1), # 16x16x128 -> 8x8x256
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(256),
-            nn.Dropout(p=dropout_prob),                  #
+            nn.Dropout(p=dropout_prob),                  
             
-            nn.Conv2d(256, 128, kernel_size=1, stride=1),  # Reduce channels 256 -> 128
+            nn.Conv2d(256, 512, kernel_size=3, stride=2,padding=1),  # 8x8x256 -> 4x4x512
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.BatchNorm2d(512),
+            nn.Dropout(p=dropout_prob),                 
+
+            nn.Conv2d(512, 128, kernel_size=3, stride=2,padding=1),  # 4x4x512 -> 2x2x128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
-            nn.Dropout(p=dropout_prob),                 
+            nn.Dropout(p=dropout_prob),
             
-            nn.Flatten(),                                # 8x8×128 = 8192 (corrected from 4092)
-            nn.Linear(8 * 8 * 128, latent_dim),          # 8192 -> latent_dim
-            # nn.LeakyReLU(negative_slope=0.01),         
-        )                                               
-        if(resnet):
-            self.encoder = resnet18(pretrained = False)
-            self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-            self.encoder.maxpool = nn.Identity()
-            self.encoder.fc = nn.Linear(512, latent_dim)
+            nn.Flatten(),                                # 2x2×128 = 512
+            nn.Linear(2 * 2 * 128, latent_dim),          # 512 -> latent_dim            
+        )          
+        
         self.classifier = FinalClassifier(latent_dim)
+        
+        print("Initializing weights ....")
+        self.initialize_weights()
+        print("Initializing weights DONE")
+        
+    def initialize_weights(self):
+        # Initialize convolutional and batchnorm layers
+        for m in self.encoder.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                if m.bias is not None:  # Bias exists unless explicitly disabled
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1.0)
+                nn.init.constant_(m.bias, 0.0)
     
     def forward(self, x):
         latent = self.encoder(x)
@@ -137,10 +155,10 @@ class CIFAR10ClassifyingAutoencoder(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
 
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay = 1e-3):
         device = self.get_device()
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= weight_decay)
         scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
         
         train_losses = []

@@ -174,45 +174,63 @@ class MnistSimCLR(nn.Module):
         return train_losses, val_losses
 # ------- CIFAR10 ---------------------
 class Cifar10SimCLR(nn.Module):
-    def __init__(self, latent_dim=128,dropout_prob  = 0.35,temperature = 0.5,resnet = True):
+    def __init__(self, latent_dim=128,dropout_prob  = 0.1,temperature = 0.5):
         super().__init__()
         self.temperature = temperature
         self.aug_func = SimCLRTransform(size = 32)  # Augmentation function
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 64, 3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(64),
-
-            nn.Conv2d(64, 128, 3, stride=2, padding=1),  # 32x32x64 -> 16x16x128
+            nn.Dropout(p=dropout_prob),                  
+        
+            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),  # 32x32x64 -> 16x16x128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
-
-            nn.Conv2d(128, 256, 3, stride=2, padding=1), # 16x16x128 -> 8x8x256
+            nn.Dropout(p=dropout_prob),                  
+        
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1), # 16x16x128 -> 8x8x256
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(256),
+            nn.Dropout(p=dropout_prob),                  
             
-            nn.Conv2d(256, 128, kernel_size=1, stride=1),  # Reduce channels 256 -> 128
+            nn.Conv2d(256, 512, kernel_size=3, stride=2,padding=1),  # 8x8x256 -> 4x4x512
+            nn.LeakyReLU(negative_slope=0.01),
+            nn.BatchNorm2d(512),
+            nn.Dropout(p=dropout_prob),                 
+
+            nn.Conv2d(512, 128, kernel_size=3, stride=2,padding=1),  # 4x4x512 -> 2x2x128
             nn.LeakyReLU(negative_slope=0.01),
             nn.BatchNorm2d(128),
+            nn.Dropout(p=dropout_prob),
             
-            nn.Flatten(),                                 # 8x8×128 = 8192
-            nn.Linear(8 * 8 * 128, latent_dim),                 # 8192 -> latent_dim
-            # nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob)
+            nn.Flatten(),                                # 2x2×128 = 512
+            nn.Linear(2 * 2 * 128, latent_dim),          # 512 -> latent_dim            
         )
-
-        if(resnet):
-            self.encoder = resnet18(pretrained = False)
-            self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-            self.encoder.maxpool = nn.Identity()
-            self.encoder.fc = nn.Linear(512, latent_dim)
             
         self.projection = nn.Sequential(
             nn.Linear(latent_dim, 2*latent_dim),  # Project to a larger dimensional space before the final projection
             nn.LeakyReLU(negative_slope=0.01),
             nn.Linear(2*latent_dim, latent_dim)
         )
-
+        print("Initializing weights ....")
+        self.initialize_weights()
+        print("Initializing weights DONE")
+        
+    def initialize_weights(self):
+        # Initialize convolutional and batchnorm layers
+        for m in self.encoder.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                if m.bias is not None:  # Bias exists unless explicitly disabled
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1.0)
+                nn.init.constant_(m.bias, 0.0)
+                
     def forward(self, x):
         """Forward pass through the encoder and projector."""
         return self.projection(self.encoder(x))
@@ -221,10 +239,10 @@ class Cifar10SimCLR(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
         
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay = 1e-3):
         device = self.get_device()
         criterion = NTXentLoss(temperature=self.temperature).to(device)
-        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= weight_decay)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
         train_losses = []
