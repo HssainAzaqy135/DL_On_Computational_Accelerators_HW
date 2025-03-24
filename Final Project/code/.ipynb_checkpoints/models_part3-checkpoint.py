@@ -41,18 +41,14 @@ class NTXentLoss(nn.Module):
         
         # Mask self-similarities
         mask = torch.eye(2 * batch_size, dtype=torch.bool, device=z.device)
-        sim_matrix = sim_matrix.masked_fill(mask, -1e9)
-        
-        # numerical stability
-        sim_max, _ = torch.max(sim_matrix, dim=1, keepdim=True)
-        sim_matrix_stable = sim_matrix - sim_max
+        sim_matrix = sim_matrix.masked_fill(mask, -1e15)
         
         # Extract positive pair sims
-        pos_sim = torch.cat([torch.diag(sim_matrix_stable, batch_size), 
-                             torch.diag(sim_matrix_stable, -batch_size)])
+        pos_sim = torch.cat([torch.diag(sim_matrix, batch_size), 
+                             torch.diag(sim_matrix, -batch_size)])
         
-        exp_sim = torch.exp(sim_matrix_stable)
-        denom = exp_sim.sum(dim=1) + self.eps  # Add epsilon to avoid log(0)
+        exp_sim = torch.exp(sim_matrix)
+        denom = exp_sim.sum(dim=1) #+ self.eps  # Add epsilon to avoid log(0)
         
         # Compute loss in log domain
         loss = -pos_sim + torch.log(denom)
@@ -83,22 +79,25 @@ class MnistSimCLR(nn.Module):
         self.temperature = temperature
           # Augmentation function
         self.aug_func = SimCLRTransform(size = 28)
-        self.data_norm_func = transforms.Normalize(mean=[0.1307], std=[0.3081])
+        self.data_norm_func = transforms.Normalize(mean=[0.5], std=[0.5])
 
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 14x14x32
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Conv2d(32, 64, 3, stride=2, padding=1),  # 7x7x64
-            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 28x28x1 -> 14x14x32
+            nn.BatchNorm2d(32),
+            nn.GELU(),
+            
+            nn.Conv2d(32, 64, 3, stride=2, padding=1),  # 14x14x32 -> 7x7x64
+            nn.BatchNorm2d(64),
+            nn.GELU(),
+            
             nn.Flatten(),
-            nn.Linear(64 * 7 * 7, latent_dim),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob) 
+            nn.Linear(64 * 7 * 7, latent_dim), # 64*7*7 -> latent_dim
         )
+        
         self.projection = nn.Sequential(
-            nn.Linear(latent_dim, 2*latent_dim),  # Project to a larger dimensional space before the final projection
+            nn.Linear(latent_dim, latent_dim),  # Project to a larger dimensional space before the final projection
             nn.LeakyReLU(negative_slope=0.01),
-            nn.Linear(2*latent_dim, latent_dim)  # Final feature dimension (e.g., 128)
+            nn.Linear(latent_dim, latent_dim)  # Final feature dimension (e.g., 128)
         )
 
     def forward(self, x):
@@ -109,10 +108,10 @@ class MnistSimCLR(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
         
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay= 1e-3):
         device = self.get_device()
         criterion = NTXentLoss(temperature=self.temperature).to(device)
-        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= 1e-3)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
         train_losses = []
@@ -126,14 +125,22 @@ class MnistSimCLR(nn.Module):
             # Training loop
             for batch_idx, (images, _) in enumerate(train_loader):
                 images = images.to(device)  # Move the data to the device
-                
-                # Create augmented pairs (two augmented versions of the same image)
-                aug1 = self.aug_func(images)
-                aug2 = self.aug_func(images)
+                batch_size= images.shape[0]
+                # # Create augmented pairs (two augmented versions of the same image)
+                # aug1 = self.aug_func(images)
+                # aug2 = self.aug_func(images)
         
+                # # Forward pass (compute embeddings for augmented images)
+                # z_i = self(self.data_norm_func(aug1))
+                # z_j = self(self.data_norm_func(aug2))
+
+                # # Forward together
+                aug1 = self.data_norm_func(self.aug_func(images))
+                aug2 = self.data_norm_func(self.aug_func(images))
+                aug_pair = torch.cat([aug1,aug2],dim = 0)
+                embedded_pair = self(aug_pair)
                 # Forward pass (compute embeddings for augmented images)
-                z_i = self(self.data_norm_func(aug1))
-                z_j = self(self.data_norm_func(aug2))
+                z_i ,z_j = embedded_pair[:batch_size,],embedded_pair[batch_size:,]
                 # print(f"z_i shape {z_i.shape}, z_j shape {z_j.shape}")
                 # Compute loss
                 loss = criterion(z_i, z_j)
@@ -185,7 +192,7 @@ class Cifar10SimCLR(nn.Module):
         self.temperature = temperature
         # Augmentation function
         self.aug_func = SimCLRTransform(size = 32)
-        self.data_norm_func = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2470, 0.2435, 0.2616])
+        self.data_norm_func = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),    # 32x32x3 -> 16x16x32
@@ -205,9 +212,9 @@ class Cifar10SimCLR(nn.Module):
         )
             
         self.projection = nn.Sequential(
-            nn.Linear(latent_dim, 2*latent_dim),  # Project to a larger dimensional space before the final projection
+            nn.Linear(latent_dim,latent_dim),  # Project to a larger dimensional space before the final projection
             nn.LeakyReLU(negative_slope=0.01),
-            nn.Linear(2*latent_dim, latent_dim)
+            nn.Linear(latent_dim, latent_dim)
         )
         print("Initializing weights ....")
         self.initialize_weights()
@@ -217,11 +224,11 @@ class Cifar10SimCLR(nn.Module):
         # Initialize convolutional and batchnorm layers
         for m in self.encoder.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
                 if m.bias is not None:  # Bias exists unless explicitly disabled
                     nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1.0)
@@ -240,7 +247,7 @@ class Cifar10SimCLR(nn.Module):
         criterion = NTXentLoss(temperature=self.temperature).to(device)
         optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= weight_decay)
         scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-
+        
         train_losses = []
         val_losses = []
         
@@ -252,22 +259,31 @@ class Cifar10SimCLR(nn.Module):
             # Training loop
             for batch_idx, (images, _) in enumerate(train_loader):
                 images = images.to(device)  # Move the data to the device
-                
-                # Create augmented pairs (two augmented versions of the same image)
-                aug1 = self.aug_func(images)#.clamp(min=-1,max =1)
-                aug2 = self.aug_func(images)#.clamp(min=-1,max =1)
+                batch_size= images.shape[0]
+                # # Forwarding separtely before
+                # # Create augmented pairs (two augmented versions of the same image)
+                # aug1 = self.aug_func(images)
+                # aug2 = self.aug_func(images)
 
+                # # Forward pass (compute embeddings for augmented images)
+                # z_i = self(self.data_norm_func(aug1))
+                # z_j = self(self.data_norm_func(aug2))
+
+
+                # # Forward together
+                aug1 = self.data_norm_func(self.aug_func(images))
+                aug2 = self.data_norm_func(self.aug_func(images))
+                aug_pair = torch.cat([aug1,aug2],dim = 0)
+                embedded_pair = self(aug_pair)
                 # Forward pass (compute embeddings for augmented images)
-                z_i = self(self.data_norm_func(aug1))
-                z_j = self(self.data_norm_func(aug2))
-
+                z_i ,z_j = embedded_pair[:batch_size,],embedded_pair[batch_size:,]
+                #print(f"z_i shape {z_i.shape} ")
                 # Compute loss
                 loss = criterion(z_i, z_j)
         
                 # Backward pass and optimization
                 optimizer.zero_grad() 
                 loss.backward()
-                # torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
                 optimizer.step()
         
                 total_train_loss += loss.item()   

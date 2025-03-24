@@ -13,17 +13,16 @@ class MNISTClassifyingAutoencoder(nn.Module):
         super().__init__()
         # Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 14x14
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob),                
-    
-            nn.Conv2d(32, 64, 3, stride=2, padding=1), # 7x7
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob),                
+            nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 28x28x1 -> 14x14x32
+            nn.BatchNorm2d(32),
+            nn.GELU(),
+            
+            nn.Conv2d(32, 64, 3, stride=2, padding=1),  # 14x14x32 -> 7x7x64
+            nn.BatchNorm2d(64),
+            nn.GELU(),
             
             nn.Flatten(),
-            nn.Linear(64 * 7 * 7, latent_dim),
-            nn.LeakyReLU(negative_slope=0.01)          
+            nn.Linear(64 * 7 * 7, latent_dim), # 64*7*7 -> latent_dim
         )
 
         self.classifier = FinalClassifier(latent_dim)
@@ -37,10 +36,10 @@ class MNISTClassifyingAutoencoder(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
 
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay=1e-3):
         device = self.get_device()
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
+        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay=1e-3)
         scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
         
         train_losses = []
@@ -123,11 +122,11 @@ class CIFAR10ClassifyingAutoencoder(nn.Module):
         # Initialize convolutional and batchnorm layers
         for m in self.encoder.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
                 if m.bias is not None:  # Bias exists unless explicitly disabled
                     nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1.0)

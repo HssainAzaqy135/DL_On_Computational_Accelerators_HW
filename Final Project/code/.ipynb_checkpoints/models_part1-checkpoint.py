@@ -98,27 +98,30 @@ class MNISTAutoencoder(nn.Module):
         super().__init__()
         # Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 14x14
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob),  
-            nn.Conv2d(32, 64, 3, stride=2, padding=1),  # 7x7
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob),  
+            nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 28x28x1 -> 14x14x32
+            nn.BatchNorm2d(32),
+            nn.GELU(),
+            
+            nn.Conv2d(32, 64, 3, stride=2, padding=1),  # 14x14x32 -> 7x7x64
+            nn.BatchNorm2d(64),
+            nn.GELU(),
+            
             nn.Flatten(),
-            nn.Linear(64 * 7 * 7, latent_dim),
+            nn.Linear(64 * 7 * 7, latent_dim), # 64*7*7 -> latent_dim
         )
         
         # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 64 * 7 * 7),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob),  
-            nn.Unflatten(1, (64, 7, 7)),
-            nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.Dropout(p=dropout_prob),  
-            nn.ConvTranspose2d(32, 1, 3, stride=2, padding=1, output_padding=1),
-            nn.Tanh()  # for output to be in [0,1]
+            nn.Dropout(p=dropout_prob),
+            nn.Linear(latent_dim, 64 * 7 * 7),          # latent_dim -> 64*7*7
+            nn.Unflatten(1, (64, 7, 7)),                # 64*7*7 -> 7x7x64
+            
+            nn.ConvTranspose2d(64, 32, 3, stride=2, padding=1, output_padding=1),  # 7x7x64 -> 14x14x32
+            nn.BatchNorm2d(32),
+            nn.GELU(),
+            
+            nn.ConvTranspose2d(32, 1, 3, stride=2, padding=1, output_padding=1),   # 14x14x32 -> 28x28x1
+            nn.Tanh()
         )
         
     def forward(self, x):
@@ -219,11 +222,11 @@ class CIFAR10Autoencoder(nn.Module):
         # Initialize convolutional and batchnorm layers
         for m in self.decoder.modules():
             if isinstance(m, nn.ConvTranspose2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu', a=0.01)
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
                 if m.bias is not None:
                     nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu', a=0.01)
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1)
@@ -231,11 +234,11 @@ class CIFAR10Autoencoder(nn.Module):
         
         for m in self.encoder.modules():
             if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
                 if m.bias is not None:  # Bias exists unless explicitly disabled
                     nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.Linear):
-                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='leaky_relu', a=0.01)
+                nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
                 nn.init.constant_(m.weight, 1.0)
