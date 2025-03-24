@@ -188,33 +188,20 @@ class Cifar10SimCLR(nn.Module):
         self.data_norm_func = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465], std=[0.2470, 0.2435, 0.2616])
         
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
-            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),    # 32x32x3 -> 16x16x32
+            nn.BatchNorm2d(32),
+            nn.GELU(),
+            
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),    # 16x16x32 -> 8x8x64
             nn.BatchNorm2d(64),
-            nn.Dropout(p=dropout_prob),                  
-        
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),  # 32x32x64 -> 16x16x128
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(128),
-            nn.Dropout(p=dropout_prob),                  
-        
-            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1), # 16x16x128 -> 8x8x256
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(256),
-            nn.Dropout(p=dropout_prob),                  
-            
-            nn.Conv2d(256, 512, kernel_size=3, stride=2,padding=1),  # 8x8x256 -> 4x4x512
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(512),
-            nn.Dropout(p=dropout_prob),                 
+            nn.GELU(),
 
-            nn.Conv2d(512, 128, kernel_size=3, stride=2,padding=1),  # 4x4x512 -> 2x2x128
-            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),    # 8x8x64 -> 4x4x128
             nn.BatchNorm2d(128),
-            nn.Dropout(p=dropout_prob),
+            nn.GELU(),
             
-            nn.Flatten(),                                # 2x2×128 = 512
-            nn.Linear(2 * 2 * 128, latent_dim),          # 512 -> latent_dim            
+            nn.Flatten(),                                # 4x4×128 = 2048
+            nn.Linear(4 * 4 * 128, latent_dim),          # 2048 -> latent_dim            
         )
             
         self.projection = nn.Sequential(

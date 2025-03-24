@@ -8,15 +8,15 @@ import time
 from torch.optim.lr_scheduler import StepLR
 # ----------------------
 class FinalClassifier(nn.Module):
-    def __init__(self, latent_dim=128,dropout_prob = 0.2):
+    def __init__(self, latent_dim=128,dropout_prob = 0.35):
         super().__init__()
         self.classifier = nn.Sequential(
-            nn.Linear(latent_dim, 256),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm1d(256),
+            nn.Linear(latent_dim, 1024),
+            nn.GELU(),
+            nn.BatchNorm1d(1024),
             nn.Dropout(dropout_prob),
-            nn.Linear(256, latent_dim),
-            nn.LeakyReLU(negative_slope=0.01),
+            nn.Linear(1024, latent_dim),
+            nn.GELU(),
             nn.BatchNorm1d(latent_dim),
             nn.Dropout(dropout_prob),
             nn.Linear(latent_dim, 10)
@@ -29,7 +29,7 @@ class FinalClassifier(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
         
-    def fit_classifier(self, encoder, train_loader, val_loader, num_epochs=50, learning_rate=1e-3):
+    def fit_classifier(self, encoder, train_loader, val_loader, num_epochs=30, learning_rate=1e-3):
         device = self.get_device()
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
@@ -106,8 +106,6 @@ class MNISTAutoencoder(nn.Module):
             nn.Dropout(p=dropout_prob),  
             nn.Flatten(),
             nn.Linear(64 * 7 * 7, latent_dim),
-            nn.LeakyReLU(negative_slope=0.01)
-            
         )
         
         # Decoder
@@ -120,7 +118,7 @@ class MNISTAutoencoder(nn.Module):
             nn.LeakyReLU(negative_slope=0.01),
             nn.Dropout(p=dropout_prob),  
             nn.ConvTranspose2d(32, 1, 3, stride=2, padding=1, output_padding=1),
-            nn.Sigmoid()  # for output to be in [0,1]
+            nn.Tanh()  # for output to be in [0,1]
         )
         
     def forward(self, x):
@@ -132,11 +130,11 @@ class MNISTAutoencoder(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
 
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-4):
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay = 1e-3):
         device = self.get_device()
         criterion = nn.L1Loss()
-        optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.25)
+        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay = 1e-3)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
         train_losses = []
         val_losses = []
         
@@ -180,66 +178,37 @@ class CIFAR10Autoencoder(nn.Module):
         
         # Encoder
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),    # 32x32x3 -> 32x32x64
-            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),    # 32x32x3 -> 16x16x32
+            nn.BatchNorm2d(32),
+            nn.GELU(),
+            
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),    # 16x16x32 -> 8x8x64
             nn.BatchNorm2d(64),
-            nn.Dropout(p=dropout_prob),                  
-        
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),  # 32x32x64 -> 16x16x128
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(128),
-            nn.Dropout(p=dropout_prob),                  
-        
-            nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1), # 16x16x128 -> 8x8x256
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(256),
-            nn.Dropout(p=dropout_prob),                  
-            
-            nn.Conv2d(256, 512, kernel_size=3, stride=2,padding=1),  # 8x8x256 -> 4x4x512
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(512),
-            nn.Dropout(p=dropout_prob),                 
+            nn.GELU(),
 
-            nn.Conv2d(512, 128, kernel_size=3, stride=2,padding=1),  # 4x4x512 -> 2x2x128
-            nn.LeakyReLU(negative_slope=0.01),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),    # 8x8x64 -> 4x4x128
             nn.BatchNorm2d(128),
-            nn.Dropout(p=dropout_prob),
+            nn.GELU(),
             
-            nn.Flatten(),                                # 2x2×128 = 512
-            nn.Linear(2 * 2 * 128, latent_dim),          # 512 -> latent_dim            
+            nn.Flatten(),                                # 4x4×128 = 2048
+            nn.Linear(4 * 4 * 128, latent_dim),          # 2048 -> latent_dim            
         )
         
         # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 2 * 2 * 128),          # latent_dim -> 2048
-            #nn.LeakyReLU(negative_slope=0.01),
-            nn.Unflatten(1, (128, 2, 2)),                # Reshape to 2x2x128
             
-            nn.ConvTranspose2d(128, 512, kernel_size=3, stride=2, padding=1,output_padding=1),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(512),
-            nn.Dropout(p=dropout_prob),
+            nn.Linear(latent_dim, 4 * 4 * 128),          # latent_dim -> 2048
+            nn.Unflatten(1, (128, 4, 4)),                # 2048 -> 4x4x128
             
-            # 4x4x512 -> 8x8x256
-            nn.ConvTranspose2d(512, 256, kernel_size=3, stride=2, padding=1, output_padding=1),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(256),
-            nn.Dropout(p=dropout_prob),
-            
-            # 8x8x256 -> 16x16x128
-            nn.ConvTranspose2d(256, 128, kernel_size=3, stride=2, padding=1, output_padding=1),
-            nn.LeakyReLU(negative_slope=0.01),
-            nn.BatchNorm2d(128),
-            nn.Dropout(p=dropout_prob),
-            
-            # 16x16x128 -> 32x32x64 (mirrors encoder's 32x32x64 -> 16x16x128)
-            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
-            nn.LeakyReLU(negative_slope=0.01),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),  # 4x4x128 -> 8x8x64
             nn.BatchNorm2d(64),
-            nn.Dropout(p=dropout_prob),
+            nn.GELU(),
             
-            # 32x32x64 -> 32x32x3
-            nn.ConvTranspose2d(64, 3, kernel_size=3, stride=1, padding=1),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),   # 8x8x64 -> 16x16x32
+            nn.BatchNorm2d(32),
+            nn.GELU(),
+            
+            nn.ConvTranspose2d(32, 3, kernel_size=4, stride=2, padding=1),
             nn.Tanh() # for cifar normalization
         )
         print("Initializing weights ....")
