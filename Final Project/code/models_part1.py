@@ -33,7 +33,7 @@ class FinalClassifier(nn.Module):
         device = self.get_device()
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.parameters(), lr=learning_rate)
-        scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
+        scheduler = StepLR(optimizer, step_size=10, gamma=0.125)
             
         encoder = encoder.to(device)
         encoder.eval()

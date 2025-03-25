@@ -62,8 +62,8 @@ class SimCLRTransform:
             transforms.RandomResizedCrop(size, scale=(0.5, 1.0)),
             transforms.RandomHorizontalFlip(p = 0.3),
             transforms.RandomApply([
-                transforms.ColorJitter(0.4, 0.4, 0.4, 0.1)
-            ], p=0.8)
+                transforms.ColorJitter(0.25, 0.25, 0.25, 0.1)
+            ], p=0.6)
         ])
 
     def __call__(self, image):
