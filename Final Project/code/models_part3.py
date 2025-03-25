@@ -6,7 +6,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 import torchvision.models
-from torchvision.models import resnet18
 # Needed for training
 import time
 from torch.optim.lr_scheduler import StepLR
@@ -79,7 +78,6 @@ class MnistSimCLR(nn.Module):
         self.temperature = temperature
           # Augmentation function
         self.aug_func = SimCLRTransform(size = 28)
-        self.data_norm_func = transforms.Normalize(mean=[0.5], std=[0.5])
 
         self.encoder = nn.Sequential(
             nn.Conv2d(1, 32, 3, stride=2, padding=1),  # 28x28x1 -> 14x14x32
@@ -112,7 +110,7 @@ class MnistSimCLR(nn.Module):
         device = self.get_device()
         criterion = NTXentLoss(temperature=self.temperature).to(device)
         optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= 1e-3)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.125)
 
         train_losses = []
         val_losses = []
@@ -124,19 +122,12 @@ class MnistSimCLR(nn.Module):
 
             # Training loop
             for batch_idx, (images, _) in enumerate(train_loader):
-                images = images.to(device)  # Move the data to the device
                 batch_size= images.shape[0]
-                # # Create augmented pairs (two augmented versions of the same image)
-                # aug1 = self.aug_func(images)
-                # aug2 = self.aug_func(images)
-        
-                # # Forward pass (compute embeddings for augmented images)
-                # z_i = self(self.data_norm_func(aug1))
-                # z_j = self(self.data_norm_func(aug2))
+                images = images.to(device)  # Move the data to the device
 
                 # # Forward together
-                aug1 = self.data_norm_func(self.aug_func(images))
-                aug2 = self.data_norm_func(self.aug_func(images))
+                aug1 = self.aug_func(images)
+                aug2 = self.aug_func(images)
                 aug_pair = torch.cat([aug1,aug2],dim = 0)
                 embedded_pair = self(aug_pair)
                 # Forward pass (compute embeddings for augmented images)
@@ -163,12 +154,13 @@ class MnistSimCLR(nn.Module):
             total_val_loss = 0.0
             with torch.no_grad(): 
                 for images, _ in val_loader:
+                    batch_size= images.shape[0]
                     images = images.to(device)
                     # No augmentation for val set
-                    # aug1 = self.aug_func(images)
-                    # aug2 = self.aug_func(images)
-                    z_i = self(self.data_norm_func(images))
-                    z_j = self(self.data_norm_func(images))
+                    aug_pair = torch.cat([images,images],dim = 0)
+                    embedded_pair = self(aug_pair)
+                    # Forward pass (compute embeddings for augmented images)
+                    z_i ,z_j = embedded_pair[:batch_size,],embedded_pair[batch_size:,]
                     loss = criterion(z_i, z_j)
                     total_val_loss += loss.item()
 
@@ -192,7 +184,6 @@ class Cifar10SimCLR(nn.Module):
         self.temperature = temperature
         # Augmentation function
         self.aug_func = SimCLRTransform(size = 32)
-        self.data_norm_func = transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
         
         self.encoder = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=4, stride=2, padding=1),    # 32x32x3 -> 16x16x32
@@ -242,12 +233,12 @@ class Cifar10SimCLR(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
         
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay = 1e-3):
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay= 1e-3):
         device = self.get_device()
         criterion = NTXentLoss(temperature=self.temperature).to(device)
-        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= weight_decay)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-        
+        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= 1e-3)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.125)
+
         train_losses = []
         val_losses = []
         
@@ -258,33 +249,25 @@ class Cifar10SimCLR(nn.Module):
 
             # Training loop
             for batch_idx, (images, _) in enumerate(train_loader):
-                images = images.to(device)  # Move the data to the device
                 batch_size= images.shape[0]
-                # # Forwarding separtely before
-                # # Create augmented pairs (two augmented versions of the same image)
-                # aug1 = self.aug_func(images)
-                # aug2 = self.aug_func(images)
-
-                # # Forward pass (compute embeddings for augmented images)
-                # z_i = self(self.data_norm_func(aug1))
-                # z_j = self(self.data_norm_func(aug2))
-
+                images = images.to(device)  # Move the data to the device
 
                 # # Forward together
-                aug1 = self.data_norm_func(self.aug_func(images))
-                aug2 = self.data_norm_func(self.aug_func(images))
+                aug1 = self.aug_func(images)
+                aug2 = self.aug_func(images)
                 aug_pair = torch.cat([aug1,aug2],dim = 0)
                 embedded_pair = self(aug_pair)
                 # Forward pass (compute embeddings for augmented images)
                 z_i ,z_j = embedded_pair[:batch_size,],embedded_pair[batch_size:,]
-                #print(f"z_i shape {z_i.shape} ")
+                # print(f"z_i shape {z_i.shape}, z_j shape {z_j.shape}")
                 # Compute loss
                 loss = criterion(z_i, z_j)
         
                 # Backward pass and optimization
                 optimizer.zero_grad() 
                 loss.backward()
-                optimizer.step()
+                # torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)  # Clip gradients
+                optimizer.step() 
         
                 total_train_loss += loss.item()   
             
@@ -298,13 +281,13 @@ class Cifar10SimCLR(nn.Module):
             total_val_loss = 0.0
             with torch.no_grad(): 
                 for images, _ in val_loader:
+                    batch_size= images.shape[0]
                     images = images.to(device)
                     # No augmentation for val set
-                    # aug1 = self.aug_func(images)
-                    # aug2 = self.aug_func(images)
-                    
-                    z_i = self(self.data_norm_func(images))
-                    z_j = self(self.data_norm_func(images))
+                    aug_pair = torch.cat([images,images],dim = 0)
+                    embedded_pair = self(aug_pair)
+                    # Forward pass (compute embeddings for augmented images)
+                    z_i ,z_j = embedded_pair[:batch_size,],embedded_pair[batch_size:,]
                     loss = criterion(z_i, z_j)
                     total_val_loss += loss.item()
 
