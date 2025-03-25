@@ -58,7 +58,7 @@ def test_classifier(encoder, classifier, test_loader):
     accuracy = 100 * correct / total
     print(f'Test Accuracy: {accuracy:.2f}%')
 
-def test_classifyingAutoEncoder( classifier, test_loader):
+def test_classifyingAutoEncoder(classifier, test_loader):
     device = classifier.get_device()
     classifier.eval()
     correct = 0

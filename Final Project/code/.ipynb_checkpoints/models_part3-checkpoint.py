@@ -110,7 +110,7 @@ class MnistSimCLR(nn.Module):
         device = self.get_device()
         criterion = NTXentLoss(temperature=self.temperature).to(device)
         optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= 1e-3)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.125)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.125,patience=5,min_lr=1e-7)
 
         train_losses = []
         val_losses = []
@@ -147,7 +147,8 @@ class MnistSimCLR(nn.Module):
              
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
-            scheduler.step()  # Step the scheduler
+
+            
 
             # Validation loop
             self.eval()   
@@ -168,13 +169,15 @@ class MnistSimCLR(nn.Module):
             avg_val_loss = total_val_loss / len(val_loader)
             val_losses.append(avg_val_loss)
 
+            scheduler.step(avg_val_loss)
             # Time taken for the epoch
             epoch_time = time.time() - start_time
 
+            curr_lr = optimizer.param_groups[0]['lr']
             # Print the progress
             print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, '
                   f'Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, '
-                  f'LR: {scheduler.get_last_lr()[0]:.6f}')
+                  f'LR: {curr_lr:.6f}')
         
         return train_losses, val_losses
 # ------- CIFAR10 ---------------------
@@ -237,7 +240,7 @@ class Cifar10SimCLR(nn.Module):
         device = self.get_device()
         criterion = NTXentLoss(temperature=self.temperature).to(device)
         optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= 1e-3)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.125)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.125,patience=5,min_lr=1e-7)
 
         train_losses = []
         val_losses = []
@@ -274,7 +277,8 @@ class Cifar10SimCLR(nn.Module):
              
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
-            scheduler.step()  # Step the scheduler
+
+            
 
             # Validation loop
             self.eval()   
@@ -295,12 +299,14 @@ class Cifar10SimCLR(nn.Module):
             avg_val_loss = total_val_loss / len(val_loader)
             val_losses.append(avg_val_loss)
 
+            scheduler.step(avg_val_loss)
             # Time taken for the epoch
             epoch_time = time.time() - start_time
 
+            curr_lr = optimizer.param_groups[0]['lr']
             # Print the progress
             print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, '
                   f'Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, '
-                  f'LR: {scheduler.get_last_lr()[0]:.6f}')
+                  f'LR: {curr_lr:.6f}')
         
         return train_losses, val_losses

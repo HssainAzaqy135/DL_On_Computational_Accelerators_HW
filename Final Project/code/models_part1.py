@@ -137,7 +137,7 @@ class MNISTAutoencoder(nn.Module):
         device = self.get_device()
         criterion = nn.L1Loss()
         optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay = 1e-3)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.125,patience=5,min_lr=1e-7)
         train_losses = []
         val_losses = []
         
@@ -157,7 +157,7 @@ class MNISTAutoencoder(nn.Module):
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
 
-            scheduler.step()
+            
             
             self.eval()
             total_val_loss = 0
@@ -170,8 +170,12 @@ class MNISTAutoencoder(nn.Module):
             
             avg_val_loss = total_val_loss / len(val_loader)
             val_losses.append(avg_val_loss)
+
+            scheduler.step(avg_val_loss)
+            curr_lr = optimizer.param_groups[0]['lr']
+            
             epoch_time = time.time() - start_time
-            print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, LR: {scheduler.get_last_lr()[0]:.6f}')
+            print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, LR: {curr_lr:.7f}')
         
         return train_losses, val_losses
 # ---------- CIFAR10 ----------------------
@@ -254,11 +258,11 @@ class CIFAR10Autoencoder(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
 
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay= 1e-3):
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay = 1e-3):
         device = self.get_device()
         criterion = nn.L1Loss()
-        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= weight_decay)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay = 1e-3)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='min',factor=0.125,patience=5,min_lr=1e-7)
         train_losses = []
         val_losses = []
         
@@ -274,11 +278,11 @@ class CIFAR10Autoencoder(nn.Module):
                 loss.backward()
                 optimizer.step()
                 total_train_loss += loss.item()
-            
+
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
+
             
-            scheduler.step()
             
             self.eval()
             total_val_loss = 0
@@ -291,7 +295,11 @@ class CIFAR10Autoencoder(nn.Module):
             
             avg_val_loss = total_val_loss / len(val_loader)
             val_losses.append(avg_val_loss)
+
+            scheduler.step(avg_val_loss)
+            curr_lr = optimizer.param_groups[0]['lr']
+            
             epoch_time = time.time() - start_time
-            print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f} , LR: {scheduler.get_last_lr()[0]:.6f}')
+            print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}, LR: {curr_lr:.7f}')
         
         return train_losses, val_losses

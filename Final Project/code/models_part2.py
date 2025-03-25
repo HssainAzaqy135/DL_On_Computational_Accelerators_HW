@@ -40,7 +40,7 @@ class MNISTClassifyingAutoencoder(nn.Module):
         device = self.get_device()
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay=1e-3)
-        scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='max',threshold=0.001,factor=0.125,patience=5,min_lr=1e-7) # accuracy here
         
         train_losses = []
         val_accuracies = []
@@ -65,7 +65,7 @@ class MNISTClassifyingAutoencoder(nn.Module):
                 total_train += target.size(0)
                 correct_train += (predicted == target).sum().item()
             
-            scheduler.step()
+            
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
             train_accuracy = 100 * correct_train / total_train
@@ -85,8 +85,11 @@ class MNISTClassifyingAutoencoder(nn.Module):
             val_accuracy = 100 * correct / total
             val_accuracies.append(val_accuracy)
 
+            scheduler.step(val_accuracy)
+            curr_lr = optimizer.param_groups[0]['lr']
+            
             epoch_time = time.time() - start_time
-            print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%, Val Accuracy: {val_accuracy:.2f}%, LR: {scheduler.get_last_lr()[0]:.6f}')
+            print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%, Val Accuracy: {val_accuracy:.2f}%, LR: {curr_lr:.7f}')
             
         return train_losses, train_accuracies,val_accuracies
 
@@ -141,11 +144,11 @@ class CIFAR10ClassifyingAutoencoder(nn.Module):
         """Returns the current device of the model"""
         return next(self.parameters()).device 
 
-    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay = 1e-3):
+    def train_autoencoder(self, train_loader, val_loader, num_epochs=20, learning_rate=1e-3,weight_decay=1e-3):
         device = self.get_device()
         criterion = nn.CrossEntropyLoss()
-        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay= weight_decay)
-        scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
+        optimizer = optim.AdamW(self.parameters(), lr=learning_rate,weight_decay=1e-3)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer,mode='max',threshold=0.001,factor=0.125,patience=5,min_lr=1e-7) # accuracy here
         
         train_losses = []
         val_accuracies = []
@@ -170,7 +173,7 @@ class CIFAR10ClassifyingAutoencoder(nn.Module):
                 total_train += target.size(0)
                 correct_train += (predicted == target).sum().item()
             
-            scheduler.step()
+            
             avg_train_loss = total_train_loss / len(train_loader)
             train_losses.append(avg_train_loss)
             train_accuracy = 100 * correct_train / total_train
@@ -190,7 +193,10 @@ class CIFAR10ClassifyingAutoencoder(nn.Module):
             val_accuracy = 100 * correct / total
             val_accuracies.append(val_accuracy)
 
+            scheduler.step(val_accuracy)
+            curr_lr = optimizer.param_groups[0]['lr']
+            
             epoch_time = time.time() - start_time
-            print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%, Val Accuracy: {val_accuracy:.2f}%, LR: {scheduler.get_last_lr()[0]:.6f}')
+            print(f'Epoch [{epoch+1}/{num_epochs}], Time: {epoch_time:.2f}s, Train Loss: {avg_train_loss:.4f}, Train Accuracy: {train_accuracy:.2f}%, Val Accuracy: {val_accuracy:.2f}%, LR: {curr_lr:.7f}')
             
         return train_losses, train_accuracies,val_accuracies
