@@ -2,6 +2,7 @@
 import torch
 import torch.nn as nn
 import time
+import os
 from matplotlib import pyplot as plt
 # Needed for training
 from torch.optim.lr_scheduler import StepLR
@@ -72,3 +73,57 @@ def test_classifyingAutoEncoder(classifier, test_loader):
             correct += (predicted == target).sum().item()
     accuracy = 100 * correct / total
     print(f'Test Accuracy: {accuracy:.2f}%')
+# --------- Model container class for svaing and loading -----------------
+class PretrainedModel(nn.Module):
+    def __init__(self, encoder,classifier,decoder=None):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+        self.classifier = classifier
+        # freeze all weights
+        for param in self.encoder.parameters():
+            param.requires_grad = False
+        for param in self.classifier.parameters():
+            param.requires_grad = False
+        if self.decoder is not None:
+            for param in self.decoder.parameters():
+                param.requires_grad = False
+        
+
+    def forward(self, x):
+        return self.classifier(self.encoder(x))
+
+    def reconstruct_image(self,x):
+        return self.decoder(self.encoder(x))
+
+
+def save_pretrained_model(path,encoder,classifier,decoder = None):
+    model_to_save = PretrainedModel(encoder = encoder,classifier=classifier,decoder = decoder)
+    torch.save(model_to_save,path)
+    
+# --------- Folder creation function -------------------------------------
+def create_model_folders():
+    # Define the base directory
+    base_dir = "trained_models"
+
+    subfolders = ["part_1", "part_2", "part_3"]
+    
+    # Create the base directory if it doesn't exist
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+        print(f"Created directory: {base_dir}")
+    else:
+        print(f"Directory already exists: {base_dir}")
+    
+    # Create each subfolder
+    for subfolder in subfolders:
+        folder_path = os.path.join(base_dir, subfolder)
+        # Create subfolder only if it doesn't exist
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+            print(f"Created directory: {folder_path}")
+        else:
+            print(f"Directory already exists: {folder_path}")
+
+
+
