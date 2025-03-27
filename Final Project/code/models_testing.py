@@ -4,6 +4,7 @@ import torch.nn as nn
 import time
 import os
 from matplotlib import pyplot as plt
+from data_loading import load_and_prep_data
 # Needed for training
 from torch.optim.lr_scheduler import StepLR
 # -------------------------------------
@@ -89,7 +90,10 @@ class PretrainedModel(nn.Module):
             for param in self.decoder.parameters():
                 param.requires_grad = False
         
-
+    def get_device(self):
+        """Returns the current device of the model"""
+        return next(self.parameters()).device
+        
     def forward(self, x):
         return self.classifier(self.encoder(x))
 
@@ -101,12 +105,14 @@ def save_pretrained_model(path,encoder,classifier,decoder = None):
     model_to_save = PretrainedModel(encoder = encoder,classifier=classifier,decoder = decoder)
     torch.save(model_to_save,path)
     
-# --------- Folder creation function -------------------------------------
+# ------------ Folder creation function ----------------------------------
 def create_model_folders():
-    # Define the base directory
+    # Define the base directory for trained models
     base_dir = "trained_models"
-
     subfolders = ["part_1", "part_2", "part_3"]
+    
+    # Define the additional data folders
+    data_folders = ["mnist_data", "cifar10_data"]
     
     # Create the base directory if it doesn't exist
     if not os.path.exists(base_dir):
@@ -115,15 +121,44 @@ def create_model_folders():
     else:
         print(f"Directory already exists: {base_dir}")
     
-    # Create each subfolder
+    # Create each subfolder under trained_models
     for subfolder in subfolders:
         folder_path = os.path.join(base_dir, subfolder)
-        # Create subfolder only if it doesn't exist
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
             print(f"Created directory: {folder_path}")
         else:
             print(f"Directory already exists: {folder_path}")
+    
+    # Create mnist_data and cifar_data folders at the root level
+    for data_folder in data_folders:
+        if not os.path.exists(data_folder):
+            os.makedirs(data_folder)
+            print(f"Created directory: {data_folder}")
+        else:
+            print(f"Directory already exists: {data_folder}")
 
+# ------------ bulk testing for all models -------------------------------
 
+def test_accuracy_all_models():
+    models = ['mnist','cifar']
+    parts = [1,2,3]
+    for part in parts:
+        for model_name in models:
+            print(f"Testing : ** Part ** {part}, {model_name} model ...")
+            # load relevant data loaders
+            train_loader,val_loader,test_loader = load_and_prep_data(part = part,dataset=model_name)
+            # load model
+            pretrained_model = torch.load(f"trained_models/part_{part}/{model_name}.pth")
 
+            print("------------------ Accuracy ------------------")
+            if part != 2:
+                pretrained_encoder = pretrained_model.encoder
+                classifier = pretrained_model.classifier
+                test_classifier(encoder=pretrained_encoder,
+                                classifier=classifier,
+                                test_loader=test_loader)
+            else:
+                test_classifyingAutoEncoder(classifier=pretrained_model,
+                            test_loader=test_loader)
+            print("------------------- DONE ---------------------")
