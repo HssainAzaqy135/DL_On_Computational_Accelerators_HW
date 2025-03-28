@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 # Needed for training
 from torch.utils.data import random_split, DataLoader
 
+seed = 42 # Important for testing after saving model and re
 # ------------ Data Selction function ---------------------
 def load_and_prep_data(part,dataset):
     prep_function = {
@@ -24,6 +25,8 @@ def load_and_prep_data(part,dataset):
 
 # ------------ Mnist prep functions -----------------------
 def prep_part1_mnist():
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)  # If using GPU
     mnist_path = "./mnist_data"
 
     transform = transforms.Compose([
@@ -57,7 +60,9 @@ def prep_part1_mnist():
     print(f"Train size: {len(train_dataset)}, Validation size: {len(val_dataset)}, Test size: {len(test_dataset)}")
     
     # Create DataLoaders
-    mnist_train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    g = torch.Generator()
+    g.manual_seed(seed)
+    mnist_train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,generator = g)
     mnist_val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     mnist_test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
@@ -68,6 +73,8 @@ def prep_part2_mnist():
     return prep_part1_mnist()
 
 def prep_part3_mnist():
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)  # If using GPU
     mnist_path = "./mnist_data"
 
     train_transform = transforms.Compose([
@@ -103,7 +110,9 @@ def prep_part3_mnist():
     print(f"Train size: {len(train_dataset)}, Validation size: {len(val_dataset)}, Test size: {len(test_dataset)}")
     
     # Create DataLoaders
-    mnist_train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    g = torch.Generator()
+    g.manual_seed(seed)
+    mnist_train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,generator = g)
     mnist_val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     mnist_test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     
@@ -113,6 +122,8 @@ def prep_part3_mnist():
 
 # ------------ Cifar prep functions -----------------------
 def prep_part1_cifar():
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)  # If using GPU
     cifar10_path = "./cifar10_data"
 
     transform = transforms.Compose([
@@ -147,7 +158,9 @@ def prep_part1_cifar():
     batch_size = 64
     
     # Create DataLoaders
-    c10_train_loader = DataLoader(c10_train_dataset, batch_size=batch_size, shuffle=True)
+    g = torch.Generator()
+    g.manual_seed(seed)
+    c10_train_loader = DataLoader(c10_train_dataset, batch_size=batch_size, shuffle=True,generator = g)
     c10_val_loader = DataLoader(c10_val_dataset, batch_size=batch_size, shuffle=False)
     c10_test_loader = DataLoader(c10_test_dataset, batch_size=batch_size, shuffle=False)
     
@@ -158,6 +171,8 @@ def prep_part2_cifar():
     return prep_part1_cifar()
 
 def prep_part3_cifar():
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)  # If using GPU
     cifar10_path = "./cifar10_data"
 
     train_transform = transforms.Compose([
@@ -195,7 +210,9 @@ def prep_part3_cifar():
     
     
     # Create DataLoaders
-    c10_train_loader = DataLoader(c10_train_dataset, batch_size=batch_size, shuffle=True)
+    g = torch.Generator()
+    g.manual_seed(seed)
+    c10_train_loader = DataLoader(c10_train_dataset, batch_size=batch_size, shuffle=True,generator = g)
     c10_val_loader = DataLoader(c10_val_dataset, batch_size=batch_size, shuffle=False)
     c10_test_loader = DataLoader(c10_test_dataset, batch_size=batch_size, shuffle=False)
     

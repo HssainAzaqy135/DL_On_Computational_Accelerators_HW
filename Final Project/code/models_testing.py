@@ -60,6 +60,7 @@ def test_classifier(encoder, classifier, test_loader):
             correct += (predicted == target).sum().item()
     accuracy = 100 * correct / total
     print(f'Test Accuracy: {accuracy:.2f}%')
+    return accuracy
 
 def test_classifyingAutoEncoder(classifier, test_loader):
     device = classifier.get_device()
@@ -75,6 +76,7 @@ def test_classifyingAutoEncoder(classifier, test_loader):
             correct += (predicted == target).sum().item()
     accuracy = 100 * correct / total
     print(f'Test Accuracy: {accuracy:.2f}%')
+    return accuracy
 # --------- Model container class for svaing and loading -----------------
 class PretrainedModel(nn.Module):
     def __init__(self, encoder,classifier,decoder=None):
@@ -164,17 +166,3 @@ def test_accuracy_all_models():
                             test_loader=test_loader)
             print("------------------- DONE ---------------------")
 
-# ------------ tSNE plotting ---------------------------------------------
-def plot_all_tsne_plots():
-    models = ['mnist','cifar']
-    parts = [1,2,3]
-    for part in parts:
-        for model_name in models:
-            title = f"({model_name}_part_{part})"
-            train_loader,val_loader,test_loader = load_and_prep_data(part = part,dataset=model_name)
-            # load model
-            pretrained_model = torch.load(f"trained_models/part_{part}/{model_name}.pth")
-            plot_tsne(model = pretrained_model.encoder,
-                      dataloader= test_loader,
-                      device = pretrained_model.get_device(),
-                      title=title)
