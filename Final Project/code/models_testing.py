@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from data_loading import load_and_prep_data
 # Needed for training
 from torch.optim.lr_scheduler import StepLR
+from utils import plot_tsne
 # -------------------------------------
 # ---------- Plotting -----------------
 def plot_losses(train_losses, val_losses=None):
@@ -112,7 +113,7 @@ def create_model_folders():
     subfolders = ["part_1", "part_2", "part_3"]
     
     # Define the additional data folders
-    data_folders = ["mnist_data", "cifar10_data"]
+    data_folders = ["mnist_data", "cifar10_data","tsne_plots"]
     
     # Create the base directory if it doesn't exist
     if not os.path.exists(base_dir):
@@ -162,3 +163,18 @@ def test_accuracy_all_models():
                 test_classifyingAutoEncoder(classifier=pretrained_model,
                             test_loader=test_loader)
             print("------------------- DONE ---------------------")
+
+# ------------ tSNE plotting ---------------------------------------------
+def plot_all_tsne_plots():
+    models = ['mnist','cifar']
+    parts = [1,2,3]
+    for part in parts:
+        for model_name in models:
+            title = f"({model_name}_part_{part})"
+            train_loader,val_loader,test_loader = load_and_prep_data(part = part,dataset=model_name)
+            # load model
+            pretrained_model = torch.load(f"trained_models/part_{part}/{model_name}.pth")
+            plot_tsne(model = pretrained_model.encoder,
+                      dataloader= test_loader,
+                      device = pretrained_model.get_device(),
+                      title=title)
