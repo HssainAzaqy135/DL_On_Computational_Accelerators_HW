@@ -63,9 +63,64 @@ def Accuracy_report():
     results_df = results_df.round(2) 
     return results_df 
 
-    
+
+def test_reconstruction_loss(model,loader):
+    model.eval()
+    criterion = nn.L1Loss()
+    total_loss = 0
+    with torch.no_grad():
+        for data, _ in loader:
+            data = data.to(device)
+            reconstructed = model.reconstruct_image(data)
+            loss = criterion(reconstructed, data)
+            total_loss += loss.item()
+            
+    avg_loss = total_loss / len(loader)
+    return avg_loss
+
 def Reconstruction_report():
-    pass
+    models = ['mnist','cifar']
+    parts = [1]
+    results_dictionary = {        
+        (1,"mnist"): -1,
+        (1,"cifar"): -1,
+    }
+    for part in parts:
+        for model_name in models:
+            exp_results = {}
+            print(f"Testing Reconstruction: ** Part ** {part}, {model_name} model ...")
+            # load relevant data loaders
+            train_loader,val_loader,test_loader = load_and_prep_data(part = part,dataset=model_name)
+            # load model
+            pretrained_model = torch.load(f"trained_models/part_{part}/{model_name}.pth")
+            keys_loaders = [ ("train",train_loader),("val",val_loader),("test",test_loader)] 
+
+            for key,loader in keys_loaders:
+                print(f"Computing {key} Reconstrucion loss (MAE) ...")
+                res = test_reconstruction_loss(model = pretrained_model,loader = loader)
+                print(f"Reconstruction loss: {res}")
+                print("------------------------------")
+                exp_results[key] = res
+                
+            results_dictionary[(part,model_name)] = exp_results
+
+        # Convert directly to DataFrame
+    data = []
+    for (part, model), results in results_dictionary.items():
+        data.append({
+            'Part': part,
+            'Model': model,
+            'Train': results['train'],  # Use get() to handle missing keys
+            'Val': results['val'],
+            'Test': results['test']
+        })
+    
+    # Create DataFrame
+    results_df = pd.DataFrame(data)
+    
+    # Sort and round for better presentation
+    results_df = results_df.round(2) 
+    return results_df 
 
 def showcase_interpolation():
     pass
