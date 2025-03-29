@@ -8,7 +8,11 @@ from data_loading import load_and_prep_data
 from torchvision import datasets, transforms
 from models_testing import  test_classifier,test_classifyingAutoEncoder
 import pandas as pd
+import numpy as np
+from utils import plot_tsne
 # -------------------------------------
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def Accuracy_report():
     models = ['mnist','cifar']
     parts = [1,2,3]
@@ -66,6 +70,7 @@ def Accuracy_report():
 
 def test_reconstruction_loss(model,loader):
     model.eval()
+    model.to(device)
     criterion = nn.L1Loss()
     total_loss = 0
     with torch.no_grad():
@@ -93,7 +98,7 @@ def Reconstruction_report():
             train_loader,val_loader,test_loader = load_and_prep_data(part = part,dataset=model_name)
             # load model
             pretrained_model = torch.load(f"trained_models/part_{part}/{model_name}.pth")
-            keys_loaders = [ ("train",train_loader),("val",val_loader),("test",test_loader)] 
+            keys_loaders = [("train",train_loader),("val",val_loader),("test",test_loader)] 
 
             for key,loader in keys_loaders:
                 print(f"Computing {key} Reconstrucion loss (MAE) ...")
@@ -119,67 +124,145 @@ def Reconstruction_report():
     results_df = pd.DataFrame(data)
     
     # Sort and round for better presentation
-    results_df = results_df.round(2) 
+    results_df = results_df.round(4) 
     return results_df 
 
+
+def denormalize(image, mean, std):
+    return image * std + mean
+
 def showcase_interpolation():
-    pass
+    part = 1
+    model_name = 'mnist'
+    
+    train_loader, val_loader, test_loader = load_and_prep_data(part=part, dataset=model_name)
+    
+    # Load model
+    pretrained_model = torch.load(f"trained_models/part_{part}/{model_name}.pth")
+    pretrained_model.eval()  # Set to evaluation mode
+    
+    # Get device and move model
+    device = pretrained_model.get_device()
+    pretrained_model.to(device)
+    
+    # Get a batch of images from train loader
+    data_iter = iter(train_loader)
+    images, _ = next(data_iter)
+    
+    # Select 2 images
+    images = images[[0,3]].to(device)
+    
+    # Reconstruct images
+    with torch.no_grad():
+        reconstructed_images = pretrained_model.reconstruct_image(images)
+    
+    # Encode images
+    with torch.no_grad():
+        encodings = pretrained_model.encoder(images)
+    
+    # Generate interpolation
+    steps = 10
+    interpolated_encodings = [
+        (1 - t) * encodings[0] + t * encodings[1] for t in np.linspace(0, 1, steps)
+    ]
+    interpolated_encodings = torch.stack(interpolated_encodings)
+    
+    # Decode interpolated encodings
+    with torch.no_grad():
+        interpolated_images = pretrained_model.decoder(interpolated_encodings)
+    
+    # Denormalization parameters
+    mean, std = 0.5, 0.5
+    
+    # Move tensors to CPU for visualization
+    images = images.cpu()
+    reconstructed_images = reconstructed_images.cpu()
+    interpolated_images = interpolated_images.cpu()
+    
+    # Denormalize images
+    images = denormalize(images, mean, std).clamp(0, 1)
+    reconstructed_images = denormalize(reconstructed_images, mean, std).clamp(0, 1)
+    interpolated_images = denormalize(interpolated_images, mean, std).clamp(0, 1)
+    
+    # Plot original, reconstructed, and interpolated images
+    fig, axes = plt.subplots(1, 12, figsize=(15, 2))
+    fig.suptitle("Interpolation between two images", fontsize=14)
+    
+    axes[0].imshow(images[0].permute(1, 2, 0).squeeze(), cmap='gray')
+    axes[0].axis('off')
+    
+    for i in range(10):
+        axes[i + 1].imshow(interpolated_images[i].permute(1, 2, 0).squeeze(), cmap='gray')
+        axes[i + 1].axis('off')
+    
+    axes[11].imshow(images[1].permute(1, 2, 0).squeeze(), cmap='gray')
+    axes[11].axis('off')
+    
+    plt.show()
 
 
 
 
 # -------------------------------------
-def showcase_reconstruction(autoencoder, classifier, val_loader, num_images=5):
-    autoencoder.eval()
-    classifier.eval()
+def denormalize(image, mean, std):
+    return image * std + mean
+
+def showcase_reconstruction():
+    parts = [1]
+    models = ['mnist', 'cifar']
     
-    # Randomly select indices
-    indices = np.random.choice(len(val_dataset), num_images, replace=False)
-    images = torch.stack([val_dataset[i][0] for i in indices])
-    labels = torch.tensor([val_dataset[i][1] for i in indices])
-    
-    images = images.to(device)
-    labels = labels.to(device)
-    
-    # 1. Reconstruct images through autoencoder
-    with torch.no_grad():
-        reconstructed, latent = autoencoder(images)
-    
-    # 2. Get classifications from classifier
-    with torch.no_grad():
-        class_outputs = classifier(latent)
-        _, predictions = torch.max(class_outputs, 1)
-    
-    # 3. Prepare for visualization
-    images = images.cpu().numpy()
-    reconstructed = reconstructed.cpu().numpy()
-    predictions = predictions.cpu().numpy()
-    labels = labels.cpu().numpy()
-    
-    # 4. Plot original vs reconstructed with predictions
-    fig, axes = plt.subplots(2, num_images, figsize=(2*num_images, 4))
-    
-    for i in range(num_images):
-        # Original images (top row)
-        axes[0, i].imshow(images[i].reshape(28, 28), cmap='gray')
-        axes[0, i].axis('off')
-        axes[0, i].set_title(f'True: {labels[i]}')
-        
-        # Reconstructed images (bottom row)
-        axes[1, i].imshow(reconstructed[i].reshape(28, 28), cmap='gray')
-        axes[1, i].axis('off')
-        axes[1, i].set_title(f'Pred: {predictions[i]}')
-    
-    plt.tight_layout()
-    plt.show()
-    
-    # 5. Print results
-    print("\nResults:")
-    print("Image | True Label | Predicted Label | Correct")
-    print("-" * 45)
-    for i in range(num_images):
-        correct = "Yes" if labels[i] == predictions[i] else "No"
-        print(f"{i:5d} | {labels[i]:11d} | {predictions[i]:14d} | {correct}")
+    for part in parts:
+        for model_name in models:
+            train_loader, val_loader, test_loader = load_and_prep_data(part=part, dataset=model_name)
+            
+            # Load model
+            pretrained_model = torch.load(f"trained_models/part_{part}/{model_name}.pth")
+            pretrained_model.eval()  # Set to evaluation mode
+            
+            # Get device and move model
+            device = pretrained_model.get_device()
+            pretrained_model.to(device)
+            
+            # Get a batch of images from train loader
+            data_iter = iter(train_loader)
+            images, _ = next(data_iter)
+            
+            # Select 5 images
+            images = images[:5].to(device)
+            
+            # Reconstruct images
+            with torch.no_grad():
+                reconstructed_images = pretrained_model.reconstruct_image(images)
+            
+            # Denormalization parameters
+            if model_name == 'mnist':
+                mean, std = 0.5, 0.5
+            else:  # cifar
+                mean, std = torch.tensor([0.5, 0.5, 0.5]).view(3, 1, 1), torch.tensor([0.5, 0.5, 0.5]).view(3, 1, 1)
+            
+            # Move tensors to CPU for visualization
+            images = images.cpu()
+            reconstructed_images = reconstructed_images.cpu()
+            
+            # Denormalize images
+            images = denormalize(images, mean, std).clamp(0, 1)
+            reconstructed_images = denormalize(reconstructed_images, mean, std).clamp(0, 1)
+            
+            # Plot original and reconstructed images
+            fig, axes = plt.subplots(2, 5, figsize=(10, 4))
+            fig.suptitle(f"Reconstruction of {model_name} dataset", fontsize=14)
+            
+            for i in range(5):
+                # Original images
+                axes[0, i].imshow(images[i].permute(1, 2, 0).squeeze(), cmap='gray' if model_name == 'mnist' else None)
+                axes[0, i].axis('off')
+                
+                # Reconstructed images
+                axes[1, i].imshow(reconstructed_images[i].permute(1, 2, 0).squeeze(), cmap='gray' if model_name == 'mnist' else None)
+                axes[1, i].axis('off')
+            
+            plt.show()
+
 
 # ------------ tSNE plotting ---------------------------------------------
 def plot_all_tsne_plots():
